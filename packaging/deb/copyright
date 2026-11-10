@@ -1,0 +1,20 @@
+Janus — native desktop casting application
+Copyright: 2026 Janus contributors
+
+No project license has been selected. This local package grants no new rights
+to the Janus sources or executable beyond the third-party terms below.
+
+Third-party components linked into /usr/bin/janus:
+
+* Native AirPlay port (crates/janus-airplay): LGPL-3.0-only AND
+  LGPL-3.0-or-later. On Debian and Ubuntu systems the complete text of the
+  GNU Lesser General Public License version 3 is in
+  /usr/share/common-licenses/LGPL-3. The port's notice and provenance are
+  installed in /usr/share/doc/janus/airplay/. Before distributing binaries, provide the
+  corresponding source and relink material described in PROVENANCE.md.
+
+* Fraunhofer FDK AAC (AAC-ELD sound for Hisense/EShare boards): Software
+  License for The Fraunhofer FDK AAC Codec Library for Android, see
+  /usr/share/doc/janus/aac/NOTICE.FDK-AAC and PROVENANCE.aac.md.
+
+* OpenH264 is built from source into the executable (BSD-2-Clause).

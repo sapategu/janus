@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Janus
+Comment=Cast to nearby screens
+Exec=janus
+Icon=/usr/share/pixmaps/janus.png
+Terminal=false
+Categories=AudioVideo;Video;
+StartupNotify=true

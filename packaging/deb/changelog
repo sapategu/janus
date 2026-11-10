@@ -1,0 +1,9 @@
+janus (0.1.5-1) noble; urgency=medium
+
+  * First Debian/Ubuntu package (Ubuntu 24.04 and flavours such as Kubuntu).
+  * Native Google Cast, AirPlay and Hisense/EShare casting of a screen or one
+    window, with optional desktop sound and GPU H.264 encoding.
+  * Receivers show this computer as janus@<hostname>.
+  * Rounded, non-maximizing window with segmented source/navigation controls.
+
+ -- Janus contributors <janus@localhost.invalid>  Tue, 10 Nov 2026 18:00:00 +0000

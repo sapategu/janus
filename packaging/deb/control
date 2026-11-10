@@ -1,0 +1,17 @@
+Package: janus
+Version: @VERSION@-1
+Architecture: @ARCH@
+Maintainer: Janus contributors <janus@localhost.invalid>
+Installed-Size: @SIZE@
+Section: video
+Priority: optional
+Depends: @SHLIBDEPS@, libvulkan1, libwayland-client0, fontconfig, pipewire, xdg-desktop-portal, gstreamer1.0-plugins-base
+Recommends: xdg-desktop-portal-gnome | xdg-desktop-portal-kde, gstreamer1.0-plugins-bad, mesa-va-drivers, mesa-vulkan-drivers
+Suggests: intel-media-va-driver
+Description: Native desktop casting application
+ Janus discovers TVs and screens on the local network and casts the whole
+ screen or one application window, with optional desktop sound, speaking each
+ receiver's own protocol (Google Cast, AirPlay, Hisense/EShare boards).
+ .
+ H.264 is encoded on the GPU through GStreamer's VA plugin when the graphics
+ driver supports it; otherwise Janus uses its built-in software encoder.
