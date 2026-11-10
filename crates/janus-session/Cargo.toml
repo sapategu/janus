@@ -1,0 +1,23 @@
+[package]
+name = "janus-session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+janus-wire.workspace = true
+quinn.workspace = true
+rcgen.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+moq-net = "=0.2.21"
+web-transport-quinn = { version = "=0.12.1", default-features = false, features = ["ring"] }
+
+[lints]
+workspace = true
