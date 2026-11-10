@@ -1,0 +1,38 @@
+name: Cache cleanup
+on:
+  workflow_run:
+    workflows: [CI, Build, Release]
+    types: [completed]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+permissions:
+  actions: write
+concurrency:
+  group: cache-cleanup
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    name: Prune caches
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Delete caches of the closed pull request
+        if: github.event_name == 'pull_request'
+        env:
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --ref "$REF" --limit 1000 --json id --jq '.[].id' >stale
+          xargs -r -n 1 gh cache delete --repo "$GITHUB_REPOSITORY" <stale
+          echo "Deleted $(wc -l <stale) caches of $REF"
+      - name: Keep only the newest cache of each kind per branch
+        if: github.event_name != 'pull_request'
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --limit 1000 --json id,key,ref,createdAt \
+            | jq -r 'group_by(.ref + "|" + (.key | sub("-[^-]+$"; "")))
+                     | map(sort_by(.createdAt) | reverse | .[1:][])
+                     | .[].id' >stale
+          xargs -r -n 1 gh cache delete --repo "$GITHUB_REPOSITORY" <stale
+          echo "Deleted $(wc -l <stale) superseded caches"
+          gh cache list --repo "$GITHUB_REPOSITORY" --limit 1000
