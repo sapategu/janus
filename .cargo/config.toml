@@ -1,0 +1,3 @@
+[env]
+# audiopus_sys 0.2.2 builds its bundled Opus (macOS, Windows) with cmake_minimum_required < 3.5, which CMake 4 rejects.
+CMAKE_POLICY_VERSION_MINIMUM = "3.5"
