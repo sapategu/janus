@@ -1,0 +1,62 @@
+[workspace]
+resolver = "3"
+members = ["crates/janus-wire", "crates/janus-session", "crates/janus-discovery", "crates/janus-media", "crates/janus-cast", "crates/janus-airplay", "crates/janus-encode", "crates/janus-capture", "crates/janus-mirror", "crates/janus-cli"]
+# Keep native desktop dependencies separate so headless core checks do not
+# require graphics libraries. Each workspace has a committed lockfile.
+exclude = ["crates/janus-app"]
+
+[workspace.package]
+version = "0.1.5"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[workspace.dependencies]
+aes = "=0.8.4"
+ashpd = { version = "=0.12.3", default-features = false, features = ["async-std"] }
+anyhow = "=1.0.104"
+bytes = "=1.12.1"
+ctr = "=0.9.2"
+clap = { version = "=4.6.7", features = ["derive"] }
+openh264 = "=0.9.9"
+opus = "=0.3.1"
+pipewire = "=0.9.2"
+plist = { version = "=1.10.1", default-features = false, features = ["enable_unstable_features_that_may_break_with_minor_version_bumps"] }
+hickory-proto = { version = "=0.26.2", features = ["mdns"] }
+prost = "=0.14.4"
+quinn = { version = "=0.11.12", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rcgen = { version = "=0.14.10", default-features = false, features = ["ring"] }
+rustls = { version = "=0.23.46", default-features = false, features = ["std", "ring"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+socket2 = { version = "=0.6.5", features = ["all"] }
+thiserror = "=2.0.21"
+tokio = { version = "=1.53.3", features = ["macros", "rt-multi-thread", "net", "io-util", "time", "sync", "signal", "test-util"] }
+tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring", "tls12"] }
+x509-parser = { version = "=0.18.1", default-features = false }
+ring = "=0.17.14"
+num-bigint = "=0.4.8"
+gstreamer = "=0.25.4"
+gstreamer-app = "=0.25.2"
+gstreamer-video = "=0.25.4"
+fdk-aac-rust = { version = "=0.2.3", default-features = false, features = ["ffi"] }
+janus-wire = { path = "crates/janus-wire" }
+janus-session = { path = "crates/janus-session" }
+janus-discovery = { path = "crates/janus-discovery" }
+janus-media = { path = "crates/janus-media" }
+janus-cast = { path = "crates/janus-cast" }
+janus-airplay = { path = "crates/janus-airplay" }
+janus-encode = { path = "crates/janus-encode" }
+janus-capture = { path = "crates/janus-capture" }
+janus-mirror = { path = "crates/janus-mirror" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
