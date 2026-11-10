@@ -16,9 +16,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Linux media/capture build dependencies
+      - name: Install Linux media/capture build and test dependencies
         if: runner.os == 'Linux'
-        run: ./scripts/build.sh deps --yes
+        run: ./scripts/build.sh deps --yes --ci
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
           components: rustfmt, clippy
