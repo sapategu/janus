@@ -1,0 +1,27 @@
+[package]
+name = "janus-cast"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+janus-media.workspace = true
+aes.workspace = true
+ctr.workspace = true
+bytes.workspace = true
+prost.workspace = true
+ring.workspace = true
+rustls.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+x509-parser.workspace = true
+
+[dev-dependencies]
+rcgen.workspace = true
+
+[lints]
+workspace = true
