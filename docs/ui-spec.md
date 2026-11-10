@@ -55,27 +55,10 @@ Real discovery is the default. AzubaTV is never inserted into the device list wi
 
 ## Receiver connection check
 
-Choose source/sound on a real receiver card, then Help → Check connection.
-Google Cast uses its trust-verified read-only status/heartbeat session. AirPlay
-performs live `GET /info` and closes. Neither path launches sharing or changes
-volume. Target/address changes, leaving Help, Escape and window closure cancel
-pending work; generation checks prevent stale completions. Discovery and a live
-capability reply do not prove rendered media. Unsupported protocols remain disabled.
+Choose source/sound on a real receiver card, then Help → Check connection. Google Cast uses its trust-verified read-only status/heartbeat session. AirPlay performs live `GET /info` and closes. Neither path launches sharing or changes volume. Target/address changes, leaving Help, Escape and window closure cancel pending work; generation checks prevent stale completions. Discovery and a live capability reply do not prove rendered media. Unsupported protocols remain disabled.
 
 ## Card controls and hover behavior
 
-Production navigation, receiver controls and Refresh use a shared button helper:
-44 px hit targets, Tab/Shift+Tab traversal, Enter/Space activation, held-key repeat
-suppression and a contrasting white focus outline. Page Up/Down scroll the view;
-disabled controls are excluded from keyboard activation/tab stops. Window Sound
-explicitly says it includes everything the computer plays. These are implemented
-keyboard affordances, not completed Orca/VoiceOver/Narrator qualification.
+Production navigation, receiver controls and Refresh use a shared button helper: 44 px hit targets, Tab/Shift+Tab traversal, Enter/Space activation, held-key repeat suppression and a contrasting white focus outline. Page Up/Down scroll the view; disabled controls are excluded from keyboard activation/tab stops. Window Sound explicitly says it includes everything the computer plays. These are implemented keyboard affordances, not completed Orca/VoiceOver/Narrator qualification.
 
-Receiver cards and enabled buttons ease their fill slightly lighter over 140 ms
-on hover entry, using GPUI's native one-shot animation. Leaving restores the
-base fill. No bouncing, scaling, geometry changes, idle pulse or continuous
-render loop is added. Pressed buttons have a subtle opacity response. Decorative
-animation children are separate from the stable focusable button, so animation
-does not recreate its keyboard focus identity. Receiver IDs use browse keys,
-not list indices. This supersedes the screenshot's two-column live Cast layout;
-older `--design-preview` fixtures remain separate from production discovery.
+Receiver cards and enabled buttons ease their fill slightly lighter over 140 ms on hover entry, using GPUI's native one-shot animation. Leaving restores the base fill. No bouncing, scaling, geometry changes, idle pulse or continuous render loop is added. Pressed buttons have a subtle opacity response. Decorative animation children are separate from the stable focusable button, so animation does not recreate its keyboard focus identity. Receiver IDs use browse keys, not list indices. This supersedes the screenshot's two-column live Cast layout; older `--design-preview` fixtures remain separate from production discovery.

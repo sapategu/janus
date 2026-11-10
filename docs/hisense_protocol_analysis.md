@@ -7,11 +7,7 @@
 
 ### Evidence boundaries and artifact identity
 
-The critical question was whether the advertised AirPlay endpoint and the native
-EShare mirror endpoint are interchangeable. They are separate in the inspected
-macOS sender. This pass re-read shipped native code, traced Janus's corresponding
-startup, reproduced the failure, and exercised the corrected route on the board.
-It did not execute the vendor macOS or Windows clients on their native OSes.
+The critical question was whether the advertised AirPlay endpoint and the native EShare mirror endpoint are interchangeable. They are separate in the inspected macOS sender. This pass re-read shipped native code, traced Janus's corresponding startup, reproduced the failure, and exercised the corrected route on the board. It did not execute the vendor macOS or Windows clients on their native OSes.
 
 Fresh hashes and sizes were checked against the current extracted bytes:
 
@@ -21,27 +17,13 @@ Fresh hashes and sizes were checked against the current extracted bytes:
 | Windows `ESSDK.exe` | 34,175,488 | `be4ef494d73e48afedd19829debec2f5e3cec8b0ccf6f8cc54b00fb9725bfbd5` |
 | Windows `ESTXLibrary.dll` | 169,472 | `8588668b3daec2bed94aa5838fd427947451f9ba77f950ac5b44c41f9c6aa616` |
 
-The old macOS size was wrong. The two Windows hashes differ from the original
-report; old Windows Evidence IDs must not be assumed to describe these bytes.
-The inventory below now records the current identities. Other historical
-inventory entries were not requalified by this focused pass.
+The old macOS size was wrong. The two Windows hashes differ from the original report; old Windows Evidence IDs must not be assumed to describe these bytes. The inventory below now records the current identities. Other historical inventory entries were not requalified by this focused pass.
 
-The retained [REA evidence bundle](../research/hisense-rea-20261110.json) records
-actual tool outputs and their limitations. Windows file headers are Evidence
-`ev_b3bec5c66785dfd08859bd708ee0cdadf7fb3ca2782e9f537dfa0309076a8409`.
-REA's GNU objdump rejected the Mach-O format, rather than producing a call graph:
-`ev_b3fc4b1188e8900b70a0a3435c3a4de2d794de88675b3d23f9478f0e6c7ccae0`.
-The selected Windows exported-symbol disassembly returned no function body
-(`ev_011f7f6bb9e09d52bfe869631ff045c76f1d9a8d0e4cfd7805ecd09310f679a3`).
-Ghidra/Hopper deep analysis was unavailable. None of these results proves that
-the corresponding method or protocol is absent.
+The retained [REA evidence bundle](../research/hisense-rea-20261110.json) records actual tool outputs and their limitations. Windows file headers are Evidence `ev_b3bec5c66785dfd08859bd708ee0cdadf7fb3ca2782e9f537dfa0309076a8409`. REA's GNU objdump rejected the Mach-O format, rather than producing a call graph: `ev_b3fc4b1188e8900b70a0a3435c3a4de2d794de88675b3d23f9478f0e6c7ccae0`. The selected Windows exported-symbol disassembly returned no function body (`ev_011f7f6bb9e09d52bfe869631ff045c76f1d9a8d0e4cfd7805ecd09310f679a3`). Ghidra/Hopper deep analysis was unavailable. None of these results proves that the corresponding method or protocol is absent.
 
 ### macOS control flow: the port belongs to the protocol adapter
 
-Separately from REA, shell LLVM objdump successfully decoded the macOS SDK.
-The selected methods are retained in
-[rtsp_routing_stop_20261110.txt](../research/extracted/overseas_mac/rtsp_routing_stop_20261110.txt).
-This is static disassembly evidence, with no invented REA identifier:
+Separately from REA, shell LLVM objdump successfully decoded the macOS SDK. The selected methods are retained in [rtsp_routing_stop_20261110.txt](../research/extracted/overseas_mac/rtsp_routing_stop_20261110.txt). This is static disassembly evidence, with no invented REA identifier:
 
 | Method/site | Observation | Implementation consequence |
 | --- | --- | --- |
@@ -49,91 +31,29 @@ This is static disassembly evidence, with no invented REA identifier:
 | `-[RTSPClient teardown]`, `0xa4f35` | Builds a binary-plist `streams` request containing video stream type 110 | Stop needs the EShare video teardown, with its response checked separately from local shutdown |
 | `-[RTSPClient stopMirror]`, `0xa3c3c` | Calls teardown, then `disconnectAfterWriting` at `0xa3c89` | Native shutdown flushes the teardown write and disconnects; it does not wait for an RTSP acknowledgement |
 
-The dynamic-port accessor is observed in native code; Janus does not thereby
-gain dynamic-port negotiation support. This correction targets the static-port
-profile actually exercised. Generic AirPlay routing must stay unchanged.
+The dynamic-port accessor is observed in native code; Janus does not thereby gain dynamic-port negotiation support. This correction targets the static-port profile actually exercised. Generic AirPlay routing must stay unchanged.
 
-Windows corroborates protocol vocabulary in raw `ESSDK.exe` bytes:
-`getServerInfo` at file offset `0x121df68`, `getListenedPort` at `0x121e100`,
-`MacOSXStream` at `0x124bd44`, and `EShare (EShare 1.0)` at `0x1208340`.
-The [Windows anchor analysis](../research/extracted/overseas_win/essdk_protocol_anchors_20261110.txt)
-also maps PE sections and selected absolute-reference candidates using Python and
-GNU objdump, separately from REA. For example `getListenedPort` maps to VA
-`0x161f500`, with `.text` references at `0x7d5339` and `0x812379`; `MacOSXStream`
-is mapped too. File offsets and VAs are distinct. These candidates corroborate
-code references to the vocabulary, but do not recover a complete call graph or
-prove invocation order. Windows connection, authorization, and media control
-flow remains partially understood without deeper analysis or client traffic.
+Windows corroborates protocol vocabulary in raw `ESSDK.exe` bytes: `getServerInfo` at file offset `0x121df68`, `getListenedPort` at `0x121e100`, `MacOSXStream` at `0x124bd44`, and `EShare (EShare 1.0)` at `0x1208340`. The [Windows anchor analysis](../research/extracted/overseas_win/essdk_protocol_anchors_20261110.txt) also maps PE sections and selected absolute-reference candidates using Python and GNU objdump, separately from REA. For example `getListenedPort` maps to VA `0x161f500`, with `.text` references at `0x7d5339` and `0x812379`; `MacOSXStream` is mapped too. File offsets and VAs are distinct. These candidates corroborate code references to the vocabulary, but do not recover a complete call graph or prove invocation order. Windows connection, authorization, and media control flow remains partially understood without deeper analysis or client traffic.
 
 ### Live observations and the reproduced failure
 
-On the selected board, TCP 51010, 51040, 8000, 8121, 57395, and 51030 accepted
-connections. Port reachability alone does not qualify a protocol or authorize a
-security downgrade. A read-only HTTP HEAD on port 8000 returned
-`Server: EShare Http Server/1.0`, positive EShare-specific evidence. The
-`getServerInfo` request on 8121 timed out; a successful TCP connect must not be
-reported as a successful server-info exchange. RTSP OPTIONS on 51040 returned
-JSON encoder attributes, distinguishing it from the discovered AirPlay route.
+On the selected board, TCP 51010, 51040, 8000, 8121, 57395, and 51030 accepted connections. Port reachability alone does not qualify a protocol or authorize a security downgrade. A read-only HTTP HEAD on port 8000 returned `Server: EShare Http Server/1.0`, positive EShare-specific evidence. The `getServerInfo` request on 8121 timed out; a successful TCP connect must not be reported as a successful server-info exchange. RTSP OPTIONS on 51040 returned JSON encoder attributes, distinguishing it from the discovered AirPlay route.
 
-The baseline Janus cast attempted video SETUP through discovered port 51010 and
-failed. Hisense startup reused that connection, then retried the same endpoint;
-the declared EShare 51040 constant did not determine its connection target.
-Routing the positively identified EShare profile to its own RTSP service removed
-that failure: a three-second test-pattern run transmitted 40 frames and exited
-successfully. The user explicitly confirmed the moving pattern on the panel and
-confirmed that physical sharing stopped. These are physical observations for one
-board, distinct from synthetic framing and negotiation tests.
+The baseline Janus cast attempted video SETUP through discovered port 51010 and failed. Hisense startup reused that connection, then retried the same endpoint; the declared EShare 51040 constant did not determine its connection target. Routing the positively identified EShare profile to its own RTSP service removed that failure: a three-second test-pattern run transmitted 40 frames and exited successfully. The user explicitly confirmed the moving pattern on the panel and confirmed that physical sharing stopped. These are physical observations for one board, distinct from synthetic framing and negotiation tests.
 
-The subsequent independent sweep transmitted 54 of 54 queued frames and failed
-only its receiver teardown acknowledgement check. Packet capture
-`/tmp/janus-hisense-stop2.pcapng` (temporary local evidence) shows TEARDOWN CSeq 5
-in frame 18 and its body in frame 19, followed by receiver FIN in frame 21 with
-no RTSP response. The native `stopMirror` sequence above explains why waiting
-for an acknowledgement is an unsupported acceptance requirement for this path.
-FIN is connection closure, not an RTSP acknowledgement or proof of rendering.
+The subsequent independent sweep transmitted 54 of 54 queued frames and failed only its receiver teardown acknowledgement check. Packet capture `/tmp/janus-hisense-stop2.pcapng` (temporary local evidence) shows TEARDOWN CSeq 5 in frame 18 and its body in frame 19, followed by receiver FIN in frame 21 with no RTSP response. The native `stopMirror` sequence above explains why waiting for an acknowledgement is an unsupported acceptance requirement for this path. FIN is connection closure, not an RTSP acknowledgement or proof of rendering.
 
-Janus still sends the native video teardown before closing. Hisense shutdown
-now leaves receiver acknowledgement unknown, and acceptance reports **Pending**:
-local EShare stream/control closed; no RTSP teardown acknowledgement; confirm
-display stopped. This preserves the user's physical Stop confirmation without
-inventing an ACK. The final post-correction sweep exited 0 with 15/15 frames;
-authentication, rendering acknowledgement and teardown acknowledgement remain
-Pending. Physical observations and exact commands are in [validation](validation.md).
+Janus still sends the native video teardown before closing. Hisense shutdown now leaves receiver acknowledgement unknown, and acceptance reports **Pending**: local EShare stream/control closed; no RTSP teardown acknowledgement; confirm display stopped. This preserves the user's physical Stop confirmation without inventing an ACK. The final post-correction sweep exited 0 with 15/15 frames; authentication, rendering acknowledgement and teardown acknowledgement remain Pending. Physical observations and exact commands are in [validation](validation.md).
 
 ### Desktop behavior and remaining qualification
 
-*(Superseded 10 November 2026: the switch was removed at the user's request;
-EShare boards are supported natively, still selected only by explicit EShare
-server identity.)* Originally the Settings → **Hisense interactive display
-(Alpha)** switch was reused. It was off by default, gated proprietary
-discovery/profile selection, and was session-only. Enabling it does not start capture. Casting still uses Janus's
-normal destination, source, Cast, and Stop flow; no vendor SDK is loaded.
-The initial routing fix was video-only; the later AAC prototype added sound but
-failed the user's subsequent audio-quality check. The codec correction below
-supersedes the initial AAC-LC implementation assumption.
-Active Settings copy now says unencrypted and use a trusted LAN. Explicitly
-unavailable audio still fails visibly before capture; the pipeline must not
-silently disable requested sound. The receiver card's Cast/Cancel/Stop action
-now occupies the far right of the same horizontal row as source, sound and
-resolution; the left controls may wrap on compact widths. EShare's unencrypted
-stream must not be described as successful FairPlay,
-HomeKit pairing, or verified receiver identity in acceptance output.
+*(Superseded 10 November 2026: the switch was removed at the user's request; EShare boards are supported natively, still selected only by explicit EShare server identity.)* Originally the Settings → **Hisense interactive display (Alpha)** switch was reused. It was off by default, gated proprietary discovery/profile selection, and was session-only. Enabling it does not start capture. Casting still uses Janus's normal destination, source, Cast, and Stop flow; no vendor SDK is loaded. The initial routing fix was video-only; the later AAC prototype added sound but failed the user's subsequent audio-quality check. The codec correction below supersedes the initial AAC-LC implementation assumption. Active Settings copy now says unencrypted and use a trusted LAN. Explicitly unavailable audio still fails visibly before capture; the pipeline must not silently disable requested sound. The receiver card's Cast/Cancel/Stop action now occupies the far right of the same horizontal row as source, sound and resolution; the left controls may wrap on compact widths. EShare's unencrypted stream must not be described as successful FairPlay, HomeKit pairing, or verified receiver identity in acceptance output.
 
-The earlier video-only build gates passed: desktop build through `scripts/build.sh`, rendered
-smoke result `JANUS_SMOKE_OK`, core/desktop Clippy and formatting, and workspace
-**176 passed, 0 failed, 8 ignored**. A five-second portal-selected screen cast
-also completed at 1920×1080 without sound, and the user confirmed desktop picture
-and Stop. Its 11-frame checkpoint and high encode lateness do not qualify smooth
-1080p30; the planned frame rate is not measured performance. The user also confirmed the full rebuilt-GPUI alpha-switch, selection, Sound off,
-Cast and Stop flow. Window capture remains a separate check. See [validation](validation.md).
+The earlier video-only build gates passed: desktop build through `scripts/build.sh`, rendered smoke result `JANUS_SMOKE_OK`, core/desktop Clippy and formatting, and workspace **176 passed, 0 failed, 8 ignored**. A five-second portal-selected screen cast also completed at 1920×1080 without sound, and the user confirmed desktop picture and Stop. Its 11-frame checkpoint and high encode lateness do not qualify smooth 1080p30; the planned frame rate is not measured performance. The user also confirmed the full rebuilt-GPUI alpha-switch, selection, Sound off, Cast and Stop flow. Window capture remains a separate check. See [validation](validation.md).
 
 ### AAC follow-up — 10 November 2026: sound negotiated on its own stream
 
-The retained native methods in
-[audio_20261110.txt](../research/extracted/overseas_mac/audio_20261110.txt)
-were extracted with LLVM objdump from the same macOS SDK identified above.
-They are static binary evidence, separate from the saved REA tool results.
-The critical details are the negotiated port, raw codec framing and byte order:
+The retained native methods in [audio_20261110.txt](../research/extracted/overseas_mac/audio_20261110.txt) were extracted with LLVM objdump from the same macOS SDK identified above. They are static binary evidence, separate from the saved REA tool results. The critical details are the negotiated port, raw codec framing and byte order:
 
 | Native evidence | Observed behavior | Janus consequence |
 | --- | --- | --- |
@@ -144,48 +64,15 @@ The critical details are the negotiated port, raw codec framing and byte order:
 | `FdkAACEncoder` default constant at VA `0x1dbf80` | Bytes `0200000044ac000000ee020027000000` decode as little-endian u32 values: channels 2, rate 44100, bitrate 192000, AOT 39 | Native codec is AAC-ELD at 192 kbit/s; the initial AAC-LC/128-kbit/s choice was incorrect |
 | `-[FdkAACEncoder initEncoder]`, store at `0x42ddb` | Sets granule length `0x1e0` = 480 before encoder parameter setup | Encode 480-sample granules, not AAC-LC's 1024-sample frames |
 
-The board's actual audio SETUP response returned stream type 96 with
-`dataPort=54022` and `controlPort=54756`. These are one session's negotiated
-values, not fixed ports. Janus sends AAC to the returned `dataPort`; it does not
-invent a second control flow from `controlPort`, hardcode a UDP audio port, or
-reuse the legacy AirPlay ALAC/RTCP transport. Dynamic-port discovery for the
-initial control endpoint is a separate, still-unqualified capability.
+The board's actual audio SETUP response returned stream type 96 with `dataPort=54022` and `controlPort=54756`. These are one session's negotiated values, not fixed ports. Janus sends AAC to the returned `dataPort`; it does not invent a second control flow from `controlPort`, hardcode a UDP audio port, or reuse the legacy AirPlay ALAC/RTCP transport. Dynamic-port discovery for the initial control endpoint is a separate, still-unqualified capability.
 
-The required path is desktop PipeWire monitor → 44,100-Hz stereo PCM → AAC-ELD
-(AOT 39) at 192 kbit/s with 480-sample granules → native EShare UDP packetizer.
-The first implementation instead used AAC-LC at 128 kbit/s with 1024-sample
-frames through GStreamer's libav encoder. That codec mismatch is established
-by the native constant and parameter setup, even though some sound was heard.
-The exact ELD encoder correction is in progress; its physical result is pending.
-The earlier libav runtime package additions and RPM Release 3 describe the first
-attempt, not proof of a compatible ELD encoder or a rebuilt RPM.
+The required path is desktop PipeWire monitor → 44,100-Hz stereo PCM → AAC-ELD (AOT 39) at 192 kbit/s with 480-sample granules → native EShare UDP packetizer. The first implementation instead used AAC-LC at 128 kbit/s with 1024-sample frames through GStreamer's libav encoder. That codec mismatch is established by the native constant and parameter setup, even though some sound was heard. The exact ELD encoder correction is in progress; its physical result is pending. The earlier libav runtime package additions and RPM Release 3 describe the first attempt, not proof of a compatible ELD encoder or a rebuilt RPM.
 
-The first synthetic test in `crates/janus-encode/tests/test_aac.rs` decoded the
-AAC-LC output with `avdec_aac` using LC configuration and checked 44,100-Hz
-stereo 440/880-Hz separation. It proved that the chosen LC encoder could produce
-decodable LC; it did **not** establish the receiver's required AAC profile or
-native compatibility. Corrected proof must check AOT 39, 480-sample framing and
-actual receiver sound. Passing the old LC decoder test is insufficient.
+The first synthetic test in `crates/janus-encode/tests/test_aac.rs` decoded the AAC-LC output with `avdec_aac` using LC configuration and checked 44,100-Hz stereo 440/880-Hz separation. It proved that the chosen LC encoder could produce decodable LC; it did **not** establish the receiver's required AAC profile or native compatibility. Corrected proof must check AOT 39, 480-sample framing and actual receiver sound. Passing the old LC decoder test is insufficient.
 
-The first live eight-second audio run used Janus test-pattern video plus the
-desktop monitor while `pw-play` played alternating left 440-Hz/right 660-Hz
-tones. Its last checkpoint reported 118 video frames and 253 queued audio
-packets; the process exited 0. The user explicitly confirmed board picture,
-sound and Stop. The later window test produced the user's explicit report of
-distorted, crackling, choppy sound, rather than merely an audio/video sync issue.
-Hearing the first tones does not qualify audio quality. Queue counts alone do
-not prove transmitted or audible packets, and this codec mismatch must be fixed
-and physically retested before claiming working sound.
+The first live eight-second audio run used Janus test-pattern video plus the desktop monitor while `pw-play` played alternating left 440-Hz/right 660-Hz tones. Its last checkpoint reported 118 video frames and 253 queued audio packets; the process exited 0. The user explicitly confirmed board picture, sound and Stop. The later window test produced the user's explicit report of distorted, crackling, choppy sound, rather than merely an audio/video sync issue. Hearing the first tones does not qualify audio quality. Queue counts alone do not prove transmitted or audible packets, and this codec mismatch must be fixed and physically retested before claiming working sound.
 
-Generic acceptance now adds a Hisense audio stage. Explicit mirror runs request
-audio only when the live capability supports it; read-only runs leave the stage
-Pending. Zero actual transmitted audio packets fail; a positive transmitted
-count remains Pending with “no audio playback ACK; confirm sound physically.”
-There is no invented playback acknowledgement. Audio-quality diagnosis and the
-ELD correction/retest now take priority over claiming repeat-sweep acceptance.
-The mismatch is a concrete defect; whether the corrected codec eliminates every
-reported artifact remains unverified. Exact later results belong in
-[validation](validation.md), [todo](todo.md), and [plan](plan.md).
+Generic acceptance now adds a Hisense audio stage. Explicit mirror runs request audio only when the live capability supports it; read-only runs leave the stage Pending. Zero actual transmitted audio packets fail; a positive transmitted count remains Pending with “no audio playback ACK; confirm sound physically.” There is no invented playback acknowledgement. Audio-quality diagnosis and the ELD correction/retest now take priority over claiming repeat-sweep acceptance. The mismatch is a concrete defect; whether the corrected codec eliminates every reported artifact remains unverified. Exact later results belong in [validation](validation.md), [todo](todo.md), and [plan](plan.md).
 
 | Investigation question | State | Boundary / next proof |
 | --- | --- | --- |
@@ -198,10 +85,7 @@ reported artifact remains unverified. Exact later results belong in
 | Are all listed Hisense models, PIN-protected boards, and dynamic ports supported? | Unresolved | Require separate protocol implementation and physical acceptance per capability |
 | Is proprietary broadcast discovery fully matched to the native sender? | Partially answered | Original 50-byte layout description is retained research, not a newly validated byte contract; parser and native packet layout need separate reconciliation |
 
-The original sections below are a research ledger containing static observations,
-inferences, and illustrative snippets. “Complete” or “verified” in those sections
-must not be read as product-wide qualification. In particular, the Python sketch
-is not production code or a tested replacement for Janus's Rust lifecycle.
+The original sections below are a research ledger containing static observations, inferences, and illustrative snippets. “Complete” or “verified” in those sections must not be read as product-wide qualification. In particular, the Python sketch is not production code or a tested replacement for Janus's Rust lifecycle.
 
 ---
 
@@ -319,8 +203,7 @@ Verified in [`-[DevicesManager sendBroadcastPacket]`](file:///home/sapategu/work
   - Bytes `20..33`: ASCII `"FindECloudBox:"` (macOS/Windows) or `"Hisense516Pro\0"` (Android `overseas_ScreenShare_Android.apk`)
   - Bytes `34..49`: `0x00`
 - **Reply Packet** (received on UDP port `48689`, parsed in [`-[DevicesManager parseDataWithSplit:ip:]`](file:///home/sapategu/works/janus/research/extracted/ts_mac/eshare_part1_discovery_pin_auth.txt#L1808-L1974)):
-  - Bytes `20..N` contain a colon-delimited string split on `":"`:
-    `Prefix : DeviceName : Port : Reserved3 : Reserved4 : ServerFeaturesHex : FpsHex`
+  - Bytes `20..N` contain a colon-delimited string split on `":"`: `Prefix : DeviceName : Port : Reserved3 : Reserved4 : ServerFeaturesHex : FpsHex`
   - Field `[1]` = `DeviceName` (`Azuba-Board`)
   - Field `[2]` = Service Port
   - Field `[5]` = `ServerFeaturesHex` (`0x1001bf`), parsed via `strtoul(field5, 0, 16)`
@@ -329,15 +212,13 @@ Verified in [`-[DevicesManager sendBroadcastPacket]`](file:///home/sapategu/work
 ### 4.2 Complete PIN-to-IP Decoding Algorithms (`PinCode` Class)
 When a user enters a 6-digit, 8-digit, 6-letter, or 8-letter PIN displayed on the Hisense screen, the client deterministically computes the board's IPv4 address without needing UDP broadcast! Extracted from [`PinCode`](file:///home/sapategu/works/janus/research/extracted/ts_mac/eshare_part1_discovery_pin_auth.txt#L7709-L8705):
 
-1. **6-Digit Numeric PIN (`+[PinCode sixNumberPinToIP:]`, lines 8496–8586)**:
-   $$\text{val} = 999999 - \text{int}(\text{pin}) \quad (\text{where } 999999 = \text{0xF423F})$$
+1. **6-Digit Numeric PIN (`+[PinCode sixNumberPinToIP:]`, lines 8496–8586)**: $$\text{val} = 999999 - \text{int}(\text{pin}) \quad (\text{where } 999999 = \text{0xF423F})$$
    - If $\text{val} \le 65536$ (`0x10000`):
      - $\text{octet}_3 = (\text{val} \gg 8) \ \& \ \text{0xFF}$
      - $\text{octet}_4 = \text{val} \ \& \ \text{0xFF}$
      - Combines with the client's own local IP's first two octets: `f"{local_ip.split('.')[0]}.{local_ip.split('.')[1]}.{octet3}.{octet4}"`.
 
-2. **8-Digit Numeric PIN (`+[PinCode eightNumberPinToIP:]`, lines 8587–8685)**:
-   $$\text{val} = (99999999 - \text{int}(\text{pin})) \oplus 57395 \quad (\text{where } 99999999 = \text{0x5F5E0FF}, \ 57395 = \text{0xE033})$$
+2. **8-Digit Numeric PIN (`+[PinCode eightNumberPinToIP:]`, lines 8587–8685)**: $$\text{val} = (99999999 - \text{int}(\text{pin})) \oplus 57395 \quad (\text{where } 99999999 = \text{0x5F5E0FF}, \ 57395 = \text{0xE033})$$
    - Checks $\text{val} \le 16777216$ (`0x1000000`):
      - $\text{octet}_2 = (\text{val} \gg 16) \ \& \ \text{0xFF}$
      - $\text{octet}_3 = (\text{val} \gg 8) \ \& \ \text{0xFF}$
@@ -345,13 +226,11 @@ When a user enters a 6-digit, 8-digit, 6-letter, or 8-letter PIN displayed on th
      - Combines with the client's first IP octet: `f"{local_ip.split('.')[0]}.{octet2}.{octet3}.{octet4}"`.
 
 3. **6-Character Alphabetic PIN (`+[PinCode Char6ToIP:]`, lines 7915–8092)**:
-   - Uppercase `A–Z` base-26 decoding (`all6CharComb = 26^6 = 308,915,776 = 0x1269AE40`):
-     $$\text{num} = \sum_{i=0}^{5} (\text{ord}(c_i) - 65) \times 26^{5 - i}, \quad \text{ip\_val} = 308915775 - \text{num}$$
+   - Uppercase `A–Z` base-26 decoding (`all6CharComb = 26^6 = 308,915,776 = 0x1269AE40`): $$\text{num} = \sum_{i=0}^{5} (\text{ord}(c_i) - 65) \times 26^{5 - i}, \quad \text{ip\_val} = 308915775 - \text{num}$$
    - Extracts 3 octets (`octet2 = (ip_val >> 16) & 0xFF`, `octet3 = (ip_val >> 8) & 0xFF`, `octet4 = ip_val & 0xFF`) and prepends the local class-A octet.
 
 4. **8-Character Alphabetic PIN (`+[PinCode eightCharPinToIP:]`, lines 8276–8495)**:
-   - Uppercase `A–Z` base-26 decoding (`allCharComb = 26^8 = 208,827,064,576`, `allIPComb = 256^4 = 4,294,967,296`):
-     $$\text{num} = \sum_{i=0}^{7} (\text{ord}(c_i) - 65) \times 26^{7 - i}, \quad \text{ip\_val} = (208827064575 - \text{num}) \bmod 4294967296$$
+   - Uppercase `A–Z` base-26 decoding (`allCharComb = 26^8 = 208,827,064,576`, `allIPComb = 256^4 = 4,294,967,296`): $$\text{num} = \sum_{i=0}^{7} (\text{ord}(c_i) - 65) \times 26^{7 - i}, \quad \text{ip\_val} = (208827064575 - \text{num}) \bmod 4294967296$$
    - Extracts all 4 IPv4 octets directly: `f"{(ip_val >> 24) & 0xFF}.{(ip_val >> 16) & 0xFF}.{(ip_val >> 8) & 0xFF}.{ip_val & 0xFF}"`.
 
 ---

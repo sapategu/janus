@@ -78,48 +78,20 @@ Current constraints: the Fedora host runs native smoke, sockets, multicast, Pipe
 
 ## Immediate next exit
 
-**Done (10 November 2026):** this Linux laptop casts its screen (and sound) to
-AzubaTV over **Google Cast** and **AirPlay 2** — HomeKit PIN pairing in the CLI
-and the desktop app, encrypted control, GPU H.264 (VA-API via GStreamer) with
-software fallback, adaptive full-quality output (the screen's own size up to the
-TV's maximum, highest sustained frame rate) and size-matched playout delay. The
-user reports the current quality good. RPM `janus-0.1.4-2` declares all runtime
-dependencies. Evidence: docs/validation.md; statuses: todo.md.
+**Done (10 November 2026):** this Linux laptop casts its screen (and sound) to AzubaTV over **Google Cast** and **AirPlay 2** — HomeKit PIN pairing in the CLI and the desktop app, encrypted control, GPU H.264 (VA-API via GStreamer) with software fallback, adaptive full-quality output (the screen's own size up to the TV's maximum, highest sustained frame rate) and size-matched playout delay. The user reports the current quality good. RPM `janus-0.1.4-2` declares all runtime dependencies. Evidence: docs/validation.md; statuses: todo.md.
 
 **Receiver acceptance is generic.** `janus diagnostics check-receivers` and its opt-in test discover every LAN receiver and run each protocol's stages (discovery → device trust → capability → session → mirroring with `--mirror <s>`). No device is named; any new TV/screen is validated by rerunning it.
 
 Ordered path (outside the Hisense board):
 
-1. **Source/audio acceptance** — Window source, sound-only casting and repeated
-   start/Stop through CLI and GPUI on both protocols; record results.
-2. **Media quality** — DMA-BUF capture to the GPU encoder for 2K60/4K60
-   (PERF-ZEROCOPY); bitrate adaptation from Cast RTCP feedback and AirPlay
-   lateness.
-3. **DISCOVERY-ALL / COMPAT-DEVICES** — DLNA/UPnP and Miracast-capable receivers
-   in the same picker and sweep; more Cast/AirPlay brands by capability.
-4. **App completion** — settings (defaults, forget pairing), sharing indicator,
-   screenshots, keyboard/screen-reader checks (UI03/UI04/B05).
+1. **Source/audio acceptance** — Window source, sound-only casting and repeated start/Stop through CLI and GPUI on both protocols; record results.
+2. **Media quality** — DMA-BUF capture to the GPU encoder for 2K60/4K60 (PERF-ZEROCOPY); bitrate adaptation from Cast RTCP feedback and AirPlay lateness.
+3. **DISCOVERY-ALL / COMPAT-DEVICES** — DLNA/UPnP and Miracast-capable receivers in the same picker and sweep; more Cast/AirPlay brands by capability.
+4. **App completion** — settings (defaults, forget pairing), sharing indicator, screenshots, keyboard/screen-reader checks (UI03/UI04/B05).
 5. **Release** — signing, DEB, LGPL source/relink material, executed CI (D03).
-6. **Other senders** — macOS (P5) and Windows (P6); optional Janus-native
-   receiving (MoQ) stays separate.
+6. **Other senders** — macOS (P5) and Windows (P6); optional Janus-native receiving (MoQ) stays separate.
 
-**Hisense exit (10 November 2026; native, switch removed):** Native EShare test-pattern video
-and physical Stop now work on the first board (user-confirmed), as do a
-portal-selected desktop source and the rebuilt GPUI alpha-switch → Cast → Stop
-flow. Selected-window video plus clean AAC-ELD sound and Stop are also
-user-confirmed after correcting the native codec to AOT 39/480 samples. The responsible
-adapter opens mirroring TCP 51040 rather than mDNS AirPlay TCP 51010; explicit
-EShare identity (no switch) selects this profile. EShare has no cryptographic receiver proof;
-use only on a trusted LAN. Ordinary AirPlay retains its authentication path.
-Next exit: user-confirm the VBR/refinement/back-pressure sharpness fix on real
-desktop content (board canvas 3840×2160 now used), improve measured
-high-resolution video throughput/latency, then
-sustain clean window/screen audio-video sharing and repeat acceptance on another
-firmware. The short screen run does not qualify smooth
-1080p30 performance.
-Measured A/V synchronization, protected/moderated connections and dynamic ports
-stay outside this verified slice. The historical AirPlay failure remains in the
-[handoff](airplay-handoff.md); it no longer blocks the explicit EShare route.
+**Hisense exit (10 November 2026; native, switch removed):** Native EShare test-pattern video and physical Stop now work on the first board (user-confirmed), as do a portal-selected desktop source and the rebuilt GPUI alpha-switch → Cast → Stop flow. Selected-window video plus clean AAC-ELD sound and Stop are also user-confirmed after correcting the native codec to AOT 39/480 samples. The responsible adapter opens mirroring TCP 51040 rather than mDNS AirPlay TCP 51010; explicit EShare identity (no switch) selects this profile. EShare has no cryptographic receiver proof; use only on a trusted LAN. Ordinary AirPlay retains its authentication path. Next exit: user-confirm the VBR/refinement/back-pressure sharpness fix on real desktop content (board canvas 3840×2160 now used), improve measured high-resolution video throughput/latency, then sustain clean window/screen audio-video sharing and repeat acceptance on another firmware. The short screen run does not qualify smooth 1080p30 performance. Measured A/V synchronization, protected/moderated connections and dynamic ports stay outside this verified slice. The historical AirPlay failure remains in the [handoff](airplay-handoff.md); it no longer blocks the explicit EShare route.
 
 ## Native desktop build
 
@@ -128,31 +100,12 @@ Run `./scripts/build.sh desktop --run` (installs missing OS packages first, one 
 
 ## P0 completion gates
 
-Foundation code/documentation is implemented: both lockfiles, native smoke command/CI,
-product/OS/asset contract and signing prerequisites, deterministic flash/impulse
-fixtures, bounded packet impairment, clock driver, event correlation and retained
-synthetic baseline. See todo.md for individual verified deliverables.
+Foundation code/documentation is implemented: both lockfiles, native smoke command/CI, product/OS/asset contract and signing prerequisites, deterministic flash/impulse fixtures, bounded packet impairment, clock driver, event correlation and retained synthetic baseline. See todo.md for individual verified deliverables.
 
-Keep A01/A02/A05 open until the missing physical asset inventory is completed,
-native smoke evidence is collected on all four rows (including Linux Wayland),
-and the common-clock physical fixture is calibrated with a retained instrument
-baseline. Compilation, Xvfb software rendering and synthetic timestamps do not
-replace those acceptance conditions. No physical or multi-OS result is inferred.
+Keep A01/A02/A05 open until the missing physical asset inventory is completed, native smoke evidence is collected on all four rows (including Linux Wayland), and the common-clock physical fixture is calibrated with a retained instrument baseline. Compilation, Xvfb software rendering and synthetic timestamps do not replace those acceptance conditions. No physical or multi-OS result is inferred.
 
 ## Native RPM
 
-`./scripts/build.sh rpm` builds the locked release GPUI executable, stages the
-stripped app/launcher/icon under target/rpm, and packages via native rpmbuild.
-The current local Fedora 44 x86_64 package is
-`target/rpm/RPMS/x86_64/janus-0.1.4-2.fc44.x86_64.rpm` (digests OK). It requires
-GStreamer and recommends its VA plugin plus RPM Fusion's freeworld VA driver for
-GPU encoding; without them Janus encodes on the CPU. This unsigned package is the
-current app build; signing and distribution qualification stay open.
-See [RPM instructions](../packaging/rpm/README.md).
+`./scripts/build.sh rpm` builds the locked release GPUI executable, stages the stripped app/launcher/icon under target/rpm, and packages via native rpmbuild. The current local Fedora 44 x86_64 package is `target/rpm/RPMS/x86_64/janus-0.1.4-2.fc44.x86_64.rpm` (digests OK). It requires GStreamer and recommends its VA plugin plus RPM Fusion's freeworld VA driver for GPU encoding; without them Janus encodes on the CPU. This unsigned package is the current app build; signing and distribution qualification stay open. See [RPM instructions](../packaging/rpm/README.md).
 
-The user's Fedora screenshot confirms prior native rendering and AzubaTV discovery.
-The compact layout is a new build pending native screenshot comparison. Test its
-read-only connection phase by selecting the TV, opening Help and choosing Check
-connection. An unverified reply cannot enable Cast. This probe never sends
-receiver control or media; device trust and the capture/mirroring slice remain
-the next implementation gates.
+The user's Fedora screenshot confirms prior native rendering and AzubaTV discovery. The compact layout is a new build pending native screenshot comparison. Test its read-only connection phase by selecting the TV, opening Help and choosing Check connection. An unverified reply cannot enable Cast. This probe never sends receiver control or media; device trust and the capture/mirroring slice remain the next implementation gates.

@@ -1,35 +1,16 @@
 # Hisense 65WR6CE: native sender research
 
-Research date: 9 November 2026. **Research verified; Janus AirPlay implementation
-now has a tested legacy slice; physical compatibility remains unverified.**
-Current behavior and host test: [airplay-control.md](airplay-control.md).
+Research date: 9 November 2026. **Research verified; Janus AirPlay implementation now has a tested legacy slice; physical compatibility remains unverified.** Current behavior and host test: [airplay-control.md](airplay-control.md).
 
 **The source investigation below records the research stage before implementation.**
 
 ## Recommendation and evidence boundary
 
-Build a generic native Rust AirPlay mirroring sender, starting with the legacy
-receiver path. Use Doubletake as the main sender reference and UxPlay as an
-independent receiver for interoperability tests. The board already advertises
-AirPlay, and the user reports successful MacBook mirroring. This is stronger
-evidence for a usable transport than the failed Miracast link tests. It does not
-prove any OSS sender works on this firmware.
+Build a generic native Rust AirPlay mirroring sender, starting with the legacy receiver path. Use Doubletake as the main sender reference and UxPlay as an independent receiver for interoperability tests. The board already advertises AirPlay, and the user reports successful MacBook mirroring. This is stronger evidence for a usable transport than the failed Miracast link tests. It does not prove any OSS sender works on this firmware.
 
-The supplied `65WR6CE_Datasheet_v2.pdf` was read locally with
-`pdftotext -layout`. It describes wireless screen transmission, Android 13,
-dual-band Wi-Fi and a 4K panel, but specifies no sender wire protocol, SDK,
-authentication or mirroring codec. A 4K/60 Hz panel is not evidence for 4K/60
-wireless reception. File SHA-256:
-`6442a8b2b25c32aa8eb093b58a897b3c863e75c02bad9cc757751e5853b7a538`.
-The [manufacturer product page](https://www.hisense-b2b.com/en/65-advanced-interactive-display-2)
-also describes wireless presentation without a protocol contract.
+The supplied `65WR6CE_Datasheet_v2.pdf` was read locally with `pdftotext -layout`. It describes wireless screen transmission, Android 13, dual-band Wi-Fi and a 4K panel, but specifies no sender wire protocol, SDK, authentication or mirroring codec. A 4K/60 Hz panel is not evidence for 4K/60 wireless reception. File SHA-256: `6442a8b2b25c32aa8eb093b58a897b3c863e75c02bad9cc757751e5853b7a538`. The [manufacturer product page](https://www.hisense-b2b.com/en/65-advanced-interactive-display-2) also describes wireless presentation without a protocol contract.
 
-The prior LAN observations are preserved in
-[receiver-compatibility.md](receiver-compatibility.md): AirPlay AppleTV3,2
-emulation, `srcvers=220.68`, EShare-based sharing, no advertised Google Cast,
-and a Miracast group that forms without an RTSP session. Those are historical
-field results, not measurements repeated here. Model strings are untrusted:
-neither AppleTV3,2 nor another Hisense model selects production behavior.
+The prior LAN observations are preserved in [receiver-compatibility.md](receiver-compatibility.md): AirPlay AppleTV3,2 emulation, `srcvers=220.68`, EShare-based sharing, no advertised Google Cast, and a Miracast group that forms without an RTSP session. Those are historical field results, not measurements repeated here. Model strings are untrusted: neither AppleTV3,2 nor another Hisense model selects production behavior.
 
 ## OSS projects worth using
 
@@ -44,109 +25,36 @@ neither AppleTV3,2 nor another Hisense model selects production behavior.
 | [MiracleCast](https://github.com/albfan/miraclecast) | README explicitly says Display-Source streaming is not implemented; sink functionality exists. | P2P/sink reference, not a ready laptop-to-board sender. |
 | [eshare-linux-client](https://github.com/vinura2006/eshare-linux-client) | README claims EShare/Epson support, GPL-3.0-or-later. Inspected [start handler](https://github.com/vinura2006/eshare-linux-client/blob/main/src/app_window.py) and [media pipeline](https://github.com/vinura2006/eshare-linux-client/blob/main/src/streaming/gstreamer_pipeline.py). Start directly constructs generic RTP/H.264 UDP output to configured ports. | The inspected start path supplies no EShare session/authentication/negotiation. Generic RTP and its own mock receiver are not evidence of interoperability with this board. Do not integrate on the strength of its name. |
 
-Another Rust/GPUI sender, [Spielab](https://git.nhaiden.io/niklas/spielab), targets
-modern HAP/PTP Apple TVs and explicitly excludes legacy FairPlay/NTP receivers.
-Its README also requires external media tools. Its license file could not be
-retrieved during this research. It is not the primary candidate here.
+Another Rust/GPUI sender, [Spielab](https://git.nhaiden.io/niklas/spielab), targets modern HAP/PTP Apple TVs and explicitly excludes legacy FairPlay/NTP receivers. Its README also requires external media tools. Its license file could not be retrieved during this research. It is not the primary candidate here.
 
 ## Protocol details actually inspected
 
-Doubletake's
-[client.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/client.go)
-contains `/info` capability/plist handling and RTSP request ownership.
-[pairing.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/pairing.go)
-contains legacy/raw and HAP pairing, with protocol selection learned from the
-exchange rather than a receiver name.
-[fairplay.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/fairplay.go)
-contains `/fp-setup`, capability checks and a per-attempt authentication context;
-[fairplay_sap.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/fairplay_sap.go)
-contains the SAP hash implementation.
+Doubletake's [client.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/client.go) contains `/info` capability/plist handling and RTSP request ownership. [pairing.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/pairing.go) contains legacy/raw and HAP pairing, with protocol selection learned from the exchange rather than a receiver name. [fairplay.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/fairplay.go) contains `/fp-setup`, capability checks and a per-attempt authentication context; [fairplay_sap.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/fairplay_sap.go) contains the SAP hash implementation.
 
-[mirror.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/mirror.go)
-contains NTP/PTP timing, negotiated SETUP ordering, stream type 110 video,
-returned data ports, decoder configuration, encrypted media and feedback.
-Its legacy AES-CTR derivation agrees with the receiver-side structure in
-[UxPlay mirror_buffer.c](https://github.com/FDH2/UxPlay/blob/master/lib/mirror_buffer.c).
-Unlike Cast's per-frame encryption, this receiver maintains cipher stream state
-across partial blocks. Reusing Cast's RTP packetizer or encryption framing would
-be incorrect. Inspected
-[mirror tests](https://github.com/omarroth/doubletake/blob/main/internal/airplay/mirror_test.go)
-cover codec headers, SPS dimensions and port extraction; they were not run here.
+[mirror.go](https://github.com/omarroth/doubletake/blob/main/internal/airplay/mirror.go) contains NTP/PTP timing, negotiated SETUP ordering, stream type 110 video, returned data ports, decoder configuration, encrypted media and feedback. Its legacy AES-CTR derivation agrees with the receiver-side structure in [UxPlay mirror_buffer.c](https://github.com/FDH2/UxPlay/blob/master/lib/mirror_buffer.c). Unlike Cast's per-frame encryption, this receiver maintains cipher stream state across partial blocks. Reusing Cast's RTP packetizer or encryption framing would be incorrect. Inspected [mirror tests](https://github.com/omarroth/doubletake/blob/main/internal/airplay/mirror_test.go) cover codec headers, SPS dimensions and port extraction; they were not run here.
 
-These links are branch heads unless a tag is shown. Before implementing, fetch
-and pin exact upstream commits and file hashes, read the complete relevant
-functions and tests, and record derivation/license notices. At the research stage no upstream code was
-incorporated. The subsequent Rust port is attributed and licensed in
-[janus-airplay/PROVENANCE.md](../crates/janus-airplay/PROVENANCE.md). In particular, do not copy upstream secret-bearing debug
-logging into Janus.
+These links are branch heads unless a tag is shown. Before implementing, fetch and pin exact upstream commits and file hashes, read the complete relevant functions and tests, and record derivation/license notices. At the research stage no upstream code was incorporated. The subsequent Rust port is attributed and licensed in [janus-airplay/PROVENANCE.md](../crates/janus-airplay/PROVENANCE.md). In particular, do not copy upstream secret-bearing debug logging into Janus.
 
 ## Corrections to the earlier dead ends
 
-**EShare now offers Linux software.** The current
-[official download page](https://eshare.app/) lists an Ubuntu/Debian 64-bit
-client, linking to `https://dl.eshare.app/versions/EShare_Linux/latest/`.
-The link returned binary content to the web tool; the package was not downloaded,
-installed or tested. This corrects the blanket “no Linux client” claim, while the
-board's own download page still historically offered none. Availability does not
-establish Fedora/Wayland support or compatibility with this board's v5 firmware.
-It is a separate proprietary-client option, not an OSS native Janus adapter.
+**EShare now offers Linux software.** The current [official download page](https://eshare.app/) lists an Ubuntu/Debian 64-bit client, linking to `https://dl.eshare.app/versions/EShare_Linux/latest/`. The link returned binary content to the web tool; the package was not downloaded, installed or tested. This corrects the blanket “no Linux client” claim, while the board's own download page still historically offered none. Availability does not establish Fedora/Wayland support or compatibility with this board's v5 firmware. It is a separate proprietary-client option, not an OSS native Janus adapter.
 
-Current [ESharePro v7.6 documentation](https://eshare.app/doc/guide/pro/) describes
-native protocols and WebCast. This does not establish those features on v5.03
-Hisense firmware. WebCast/browser or cloud flows do not meet Janus's contract.
-The vendor's [deployment guide](https://eshare.app/doc/network-requirements-security-framework.html)
-labels its own LAN communication proprietary; a list of ports is not a media
-protocol specification. No usable public EShare sender SDK/protocol specification
-was found in the inspected sources. That is a search result, not proof none exists.
+Current [ESharePro v7.6 documentation](https://eshare.app/doc/guide/pro/) describes native protocols and WebCast. This does not establish those features on v5.03 Hisense firmware. WebCast/browser or cloud flows do not meet Janus's contract. The vendor's [deployment guide](https://eshare.app/doc/network-requirements-security-framework.html) labels its own LAN communication proprietary; a list of ports is not a media protocol specification. No usable public EShare sender SDK/protocol specification was found in the inspected sources. That is a search result, not proof none exists.
 
-AGENTS.md does **not** prohibit interoperability reverse engineering. It requires
-native protocols, actual source inspection, authentication and truthful evidence.
-There is no need to invent an EShare protocol while an existing AirPlay route is
-available to investigate. The DM66D REST API is a different model's management API;
-neither opening its port nor taking screenshots supplies a WR6CE mirroring path.
+AGENTS.md does **not** prohibit interoperability reverse engineering. It requires native protocols, actual source inspection, authentication and truthful evidence. There is no need to invent an EShare protocol while an existing AirPlay route is available to investigate. The DM66D REST API is a different model's management API; neither opening its port nor taking screenshots supplies a WR6CE mirroring path.
 
 ## Narrow implementation exit
 
-The following was the implementation plan. The legacy slice is now implemented;
-physical acceptance and the unsupported profiles remain open (see the current
-[implementation record](airplay-control.md)).
+The following was the implementation plan. The legacy slice is now implemented; physical acceptance and the unsupported profiles remain open (see the current [implementation record](airplay-control.md)).
 
-At the research stage the traced path was discovery `Candidate` → CLI `cast::choose` / GPUI
-Google-Cast-only gate → `janus_cast::Session` → `janus_mirror::start` → H.264/Opus
-→ Cast `Streamer`. At that point AirPlay acceptance reported session **Pending**. Current stages are documented in [airplay-control.md](airplay-control.md).
-`janus-discovery/src/protocols.rs` retains only output hints from the feature bits;
-it also groups video playback with screen support. Neither hint can authorize
-mirroring. Query live capabilities before enabling Cast.
+At the research stage the traced path was discovery `Candidate` → CLI `cast::choose` / GPUI Google-Cast-only gate → `janus_cast::Session` → `janus_mirror::start` → H.264/Opus → Cast `Streamer`. At that point AirPlay acceptance reported session **Pending**. Current stages are documented in [airplay-control.md](airplay-control.md). `janus-discovery/src/protocols.rs` retains only output hints from the feature bits; it also groups video playback with screen support. Neither hint can authorize mirroring. Query live capabilities before enabling Cast.
 
-1. Implement a generic AirPlay adapter owning bounded HTTP/RTSP/plist parsing,
-   negotiated security, timing, SETUP, media framing and teardown. First learn
-   this receiver's actual `/info` and authentication requirements at its discovered
-   service endpoint. Do not hard-code historical ports, addresses or model labels.
-   Keep discovery and connection checking free of pairing prompts and media;
-   pairing and casting require the corresponding explicit user action.
-2. First prove explicit test-pattern video and Stop with an independent receiver,
-   then this board. Do not call a socket write or a TCP ACK a displayed frame.
-   Preserve exact authentication failure reasons; never retry by disabling security.
-3. Reuse Janus capture, scaling and H.264 encoding. Extend pipeline/session ownership
-   coherently when connecting the second transport, rather than making an AirPlay
-   stream impersonate a Cast session. Add CLI and GPUI routing together, with
-   local Stop invalidation, drop cleanup and stale-generation rejection.
-4. Negotiate audio separately. Existing Opus packets are not automatically valid
-   AirPlay audio. Add only the codec selected by this receiver's verified profile;
-   include screen and window with audio off/on before claiming full support.
-5. Extend generic acceptance with capability, authentication, session, media and
-   teardown results. Keep unimplemented stages Pending. Cast RTCP ACK thresholds
-   do not transfer to AirPlay: define available receiver feedback separately and
-   retain human observation where needed to prove rendering.
+1. Implement a generic AirPlay adapter owning bounded HTTP/RTSP/plist parsing, negotiated security, timing, SETUP, media framing and teardown. First learn this receiver's actual `/info` and authentication requirements at its discovered service endpoint. Do not hard-code historical ports, addresses or model labels. Keep discovery and connection checking free of pairing prompts and media; pairing and casting require the corresponding explicit user action.
+2. First prove explicit test-pattern video and Stop with an independent receiver, then this board. Do not call a socket write or a TCP ACK a displayed frame. Preserve exact authentication failure reasons; never retry by disabling security.
+3. Reuse Janus capture, scaling and H.264 encoding. Extend pipeline/session ownership coherently when connecting the second transport, rather than making an AirPlay stream impersonate a Cast session. Add CLI and GPUI routing together, with local Stop invalidation, drop cleanup and stale-generation rejection.
+4. Negotiate audio separately. Existing Opus packets are not automatically valid AirPlay audio. Add only the codec selected by this receiver's verified profile; include screen and window with audio off/on before claiming full support.
+5. Extend generic acceptance with capability, authentication, session, media and teardown results. Keep unimplemented stages Pending. Cast RTCP ACK thresholds do not transfer to AirPlay: define available receiver feedback separately and retain human observation where needed to prove rendering.
 
-Acceptance: board remains on its normal Wi-Fi; no cable, added receiver app,
-browser, cloud, external sender process or OS casting-panel handoff; Janus picks
-screen/window, sends live picture and optional sound, and Stop returns the board
-to idle without continuing capture. Exercise rejection, disconnect and repeated
-start/stop. Repeat on another AirPlay receiver without a production-code change.
+Acceptance: board remains on its normal Wi-Fi; no cable, added receiver app, browser, cloud, external sender process or OS casting-panel handoff; Janus picks screen/window, sends live picture and optional sound, and Stop returns the board to idle without continuing capture. Exercise rejection, disconnect and repeated start/stop. Repeat on another AirPlay receiver without a production-code change.
 
-macOS/Windows remain separate capture/audio qualification work: the current mirror
-implementation returns `CaptureError::Unsupported` for their real screen/window
-sources. A portable AirPlay wire layer alone does not deliver cross-platform
-casting. CPU, memory, battery, latency and Wi-Fi-loss measurements are required
-before promising high efficiency or “perfect” compatibility.
+macOS/Windows remain separate capture/audio qualification work: the current mirror implementation returns `CaptureError::Unsupported` for their real screen/window sources. A portable AirPlay wire layer alone does not deliver cross-platform casting. CPU, memory, battery, latency and Wi-Fi-loss measurements are required before promising high efficiency or “perfect” compatibility.

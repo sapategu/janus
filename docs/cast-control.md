@@ -1,9 +1,6 @@
 # Native Cast control implementation
 
-AirPlay uses the separate `janus-airplay` legacy adapter and the shared mirror
-pipeline. Its implementation, source/license provenance and generic acceptance
-stages are documented in [airplay-control.md](airplay-control.md). It does not
-reuse Cast device trust, session types, media framing or frame-ACK criteria.
+AirPlay uses the separate `janus-airplay` legacy adapter and the shared mirror pipeline. Its implementation, source/license provenance and generic acceptance stages are documented in [airplay-control.md](airplay-control.md). It does not reuse Cast device trust, session types, media framing or frame-ACK criteria.
 
 `janus-cast` implements wire/control/authentication processing, offline device trust, owned live sessions and Cast Streaming directly in Rust, with no browser, vendor SDK, account or cloud calls. The sections below describe the implemented path and its evidence boundaries.
 
@@ -64,23 +61,11 @@ Only an explicit user Cast changes the TV. `Session::cast(streams)`:
 
 Still open: the first real-TV cast; VA-API/DMA-BUF; VP8 fallback if a receiver rejects H.264; adaptive bitrate.
 
-`connection::probe_authentication` tries at most eight advertised endpoints with
-one-second TCP deadlines and an eight-second total bound. TLS and auth each have
-three-second limits. TLS 1.2/1.3 handshake signatures are verified by rustls;
-resumption, early data and SNI are disabled. A private Cast-specific verifier
-bounds certificates, parses the exact DER and checks validity plus at most four
-days of remaining lifetime (Chromium's temporary TLS policy). Device identity is
-then established by the signed transcript above, not by the TLS certificate.
-Janus's optional open-receive verifier is never reused.
+`connection::probe_authentication` tries at most eight advertised endpoints with one-second TCP deadlines and an eight-second total bound. TLS and auth each have three-second limits. TLS 1.2/1.3 handshake signatures are verified by rustls; resumption, early data and SNI are disabled. A private Cast-specific verifier bounds certificates, parses the exact DER and checks validity plus at most four days of remaining lifetime (Chromium's temporary TLS policy). Device identity is then established by the signed transcript above, not by the TLS certificate. Janus's optional open-receive verifier is never reused.
 
-Only a fresh challenge is written; at most eight unrelated frames are ignored.
-The channel is dropped on success, error, timeout or cancellation; no reusable
-transport handle escapes. No CONNECT/GET_STATUS, heartbeat response, receiver
-mutation or media is sent.
+Only a fresh challenge is written; at most eight unrelated frames are ignored. The channel is dropped on success, error, timeout or cancellation; no reusable transport handle escapes. No CONNECT/GET_STATUS, heartbeat response, receiver mutation or media is sent.
 
-Changing the selected target/addresses, leaving Help, Escape or window closure
-cancels the check; stale generations cannot overwrite the new state. Cast
-remains disabled until the mirroring path exists.
+Changing the selected target/addresses, leaving Help, Escape or window closure cancels the check; stale generations cannot overwrite the new state. Cast remains disabled until the mirroring path exists.
 
 ## Proof
 
@@ -109,111 +94,30 @@ Protocol field assignments follow these primary sources; the implementation is n
 
 ## Hisense / EShare: separate control endpoint
 
-Supported natively since 10 November 2026 (user decision): there is no Settings
-switch, `--hisense` flag or `JANUS_HISENSE` variable any more. Discovery always
-listens on the EShare UDP port, and every non-HAP AirPlay screen receiver gets
-the bounded identity probe below. An explicit EShare server header, including the
-bounded HTTP HEAD probe on TCP 8000, is required. `AirTunes/211.3`, an Apple
-sourceVersion or a listening TCP port alone does not select this unencrypted
-profile. Explicit AirPlay password/pairing requirements and authentication
-rejections are preserved.
+Supported natively since 10 November 2026 (user decision): there is no Settings switch, `--hisense` flag or `JANUS_HISENSE` variable any more. Discovery always listens on the EShare UDP port, and every non-HAP AirPlay screen receiver gets the bounded identity probe below. An explicit EShare server header, including the bounded HTTP HEAD probe on TCP 8000, is required. `AirTunes/211.3`, an Apple sourceVersion or a listening TCP port alone does not select this unencrypted profile. Explicit AirPlay password/pairing requirements and authentication rejections are preserved.
 
-On explicit Cast, the Hisense adapter tries TCP 51040 for EShare RTSP, retaining
-the advertised connection only if primary TCP establishment fails. RTSP errors
-on the selected service are final. OPTIONS → single video SETUP (`type=110`,
-binary plist) → negotiated video dataPort; the existing Annex-B/128-byte-header
-sender owns media and local-first Stop. No HAP/FairPlay claim is made.
+On explicit Cast, the Hisense adapter tries TCP 51040 for EShare RTSP, retaining the advertised connection only if primary TCP establishment fails. RTSP errors on the selected service are final. OPTIONS → single video SETUP (`type=110`, binary plist) → negotiated video dataPort; the existing Annex-B/128-byte-header sender owns media and local-first Stop. No HAP/FairPlay claim is made.
 
-With Sound on, video TCP is connected before a second RTSP SETUP negotiates
-audio (`streams: [{type:96, audioFormat:0x01000000}]`). Audio uses the returned
-`dataPort`; one observed response returned 54022 and `controlPort` 54756. These
-are negotiated session values. Janus does not hardcode an audio UDP port or
-reuse AirPlay's ALAC/RTCP path. The native contract requires desktop-monitor PCM
-at 44,100 Hz, stereo **AAC-ELD (AOT 39), 192 kbit/s, 480-sample granules**,
-sent as raw access units after a
-12-byte native header: `80 60`, big-endian sequence, big-endian millisecond
-timestamp, then constant bytes `01 00 00 00`. No ADTS or AU-length header is
-added. Native `ESAudioSession RTPPackAndSend:withlen:` at `0x32fb4`, particularly
-the byte-8 store at `0x3306e`, corrects the earlier research's SSRC byte order.
-`RTSPClient setupAudio` at `0xa4c43` supplies the SETUP fields; retained
-[audio disassembly](../research/extracted/overseas_mac/audio_20261110.txt)
-is static evidence, not an observed vendor-client session.
+With Sound on, video TCP is connected before a second RTSP SETUP negotiates audio (`streams: [{type:96, audioFormat:0x01000000}]`). Audio uses the returned `dataPort`; one observed response returned 54022 and `controlPort` 54756. These are negotiated session values. Janus does not hardcode an audio UDP port or reuse AirPlay's ALAC/RTCP path. The native contract requires desktop-monitor PCM at 44,100 Hz, stereo **AAC-ELD (AOT 39), 192 kbit/s, 480-sample granules**, sent as raw access units after a 12-byte native header: `80 60`, big-endian sequence, big-endian millisecond timestamp, then constant bytes `01 00 00 00`. No ADTS or AU-length header is added. Native `ESAudioSession RTPPackAndSend:withlen:` at `0x32fb4`, particularly the byte-8 store at `0x3306e`, corrects the earlier research's SSRC byte order. `RTSPClient setupAudio` at `0xa4c43` supplies the SETUP fields; retained [audio disassembly](../research/extracted/overseas_mac/audio_20261110.txt) is static evidence, not an observed vendor-client session.
 
-The initial implementation wrongly used GStreamer's libav AAC-LC encoder at
-128 kbit/s with 1024-sample frames. Fresh `FdkAACEncoder` analysis shows the
-native default bytes at VA `0x1dbf80` are
-`0200000044ac000000ee020027000000` (little-endian channels 2, rate 44100,
-bitrate 192000, AOT 39); `initEncoder` sets granule 480 at `0x42ddb`.
-The exact ELD fix is in progress. The earlier libav dependency/RPM Release 3
-changes describe the initial attempt, not a verified compatible encoder or
-rebuilt RPM. The EShare profile is unencrypted; Help/README carry the trusted-LAN limit.
+The initial implementation wrongly used GStreamer's libav AAC-LC encoder at 128 kbit/s with 1024-sample frames. Fresh `FdkAACEncoder` analysis shows the native default bytes at VA `0x1dbf80` are `0200000044ac000000ee020027000000` (little-endian channels 2, rate 44100, bitrate 192000, AOT 39); `initEncoder` sets granule 480 at `0x42ddb`. The exact ELD fix is in progress. The earlier libav dependency/RPM Release 3 changes describe the initial attempt, not a verified compatible encoder or rebuilt RPM. The EShare profile is unencrypted; Help/README carry the trusted-LAN limit.
 
 ### EShare video quality (10 November 2026)
 
-The board answers every keep-alive `OPTIONS` (2 s) with its encoder wishes,
-captured on the physical board:
-`{"Framerate":"15","idr_req":"0","casting_win_width":"3840","casting_win_height":"2160","bitrate":"0","i-interval":"0",…}`
-plus `Video-Audio: <video>-<audio>` receive counters. Native
-`-[RTSPClient checkChangeEncoderAttribute:]` applies these; Janus now honours
-`idr_req` (bounded parser, `testing::idr_requested`) by forcing an IDR. Native
-`-[VideoDisplaySession initDynamicBitrateControl]` (EShareSDK, overseas macOS)
-starts near 6.7 Mbit/s at ≤1080p, with min/max bounds and a 1 s
-`checkNetworkQuality` that lowers the bitrate when the socket write queue grows.
-Native uses H.264 Baseline (`kVTProfileLevel_H264_Baseline_AutoLevel`), so
-Janus keeps Constrained Baseline.
+The board answers every keep-alive `OPTIONS` (2 s) with its encoder wishes, captured on the physical board: `{"Framerate":"15","idr_req":"0","casting_win_width":"3840","casting_win_height":"2160","bitrate":"0","i-interval":"0",…}` plus `Video-Audio: <video>-<audio>` receive counters. Native `-[RTSPClient checkChangeEncoderAttribute:]` applies these; Janus now honours `idr_req` (bounded parser, `testing::idr_requested`) by forcing an IDR. Native `-[VideoDisplaySession initDynamicBitrateControl]` (EShareSDK, overseas macOS) starts near 6.7 Mbit/s at ≤1080p, with min/max bounds and a 1 s `checkNetworkQuality` that lowers the bitrate when the socket write queue grows. Native uses H.264 Baseline (`kVTProfileLevel_H264_Baseline_AutoLevel`), so Janus keeps Constrained Baseline.
 
 Janus changes, shared by every AirPlay profile:
-- GPU encoder VBR (target = plan, peak 2×) with `max-qp=38` instead of CBR;
-  balanced `target-usage=4` at ≤1080p. CBR gave a screen change ~1/30 of a
-  second's budget, so new text stayed blurry.
-- When the picture stops changing, the last frame is re-encoded for ~0.5 s so it
-  refines. Before, only the 1 s static resend refined it.
-- Back-pressure: encoded units wait (≤8) for room in the 2-frame TCP queue, and no
-  new frame is encoded meanwhile. Before, a full queue dropped the frame and forced
-  an IDR, which was the most starved frame of all.
-- Network-following bitrate (GPU): −20 % per second when >10 % of ticks were
-  blocked (floor plan/4, ≥1 Mbit/s), +10 % per clear second up to the plan.
+- GPU encoder VBR (target = plan, peak 2×) with `max-qp=38` instead of CBR; balanced `target-usage=4` at ≤1080p. CBR gave a screen change ~1/30 of a second's budget, so new text stayed blurry.
+- When the picture stops changing, the last frame is re-encoded for ~0.5 s so it refines. Before, only the 1 s static resend refined it.
+- Back-pressure: encoded units wait (≤8) for room in the 2-frame TCP queue, and no new frame is encoded meanwhile. Before, a full queue dropped the frame and forced an IDR, which was the most starved frame of all.
+- Network-following bitrate (GPU): −20 % per second when >10 % of ticks were blocked (floor plan/4, ≥1 Mbit/s), +10 % per clear second up to the plan.
 
-Canvas: the probe sends one `OPTIONS` to TCP 51040 before any SETUP (verified
-on the board: `CastingNumber: 0`, nothing starts) and uses `casting_win_width/
-height` (bounded 320×240–7680×4320, even) as the receiver maximum instead of
-the AirPlay `/info` 1920×1080. Resolution choices up to 4K now apply; a cast
-still never upscales beyond the source. The board's `Framerate` (15) is
-recorded but not applied: its `Video-Audio` counters advanced ~25–30 video
-frames/s at Janus's 30 fps, so motion stays at 30.
+Canvas: the probe sends one `OPTIONS` to TCP 51040 before any SETUP (verified on the board: `CastingNumber: 0`, nothing starts) and uses `casting_win_width/ height` (bounded 320×240–7680×4320, even) as the receiver maximum instead of the AirPlay `/info` 1920×1080. Resolution choices up to 4K now apply; a cast still never upscales beyond the source. The board's `Framerate` (15) is recorded but not applied: its `Video-Audio` counters advanced ~25–30 video frames/s at Janus's 30 fps, so motion stays at 30.
 
-Hisense generic acceptance adds an audio stage: read-only stays Pending;
-explicit mirroring requests audio when live capability supports it. Zero actual
-transmitted audio packets fail. Positive counts remain Pending with physical
-sound confirmation required; queued packets are not playback acknowledgements.
-Other AirPlay profiles keep their existing acceptance sound behavior.
+Hisense generic acceptance adds an audio stage: read-only stays Pending; explicit mirroring requests audio when live capability supports it. Zero actual transmitted audio packets fail. Positive counts remain Pending with physical sound confirmation required; queued packets are not playback acknowledgements. Other AirPlay profiles keep their existing acceptance sound behavior.
 
-Native macOS `RTSPClient startMrror` calls `getDynamicPort_51040`; `teardown`
-sends only `streams: [{type:110}]`; `stopMirror` calls `disconnectAfterWriting`.
-The real board responds to Janus's TEARDOWN with FIN rather than an RTSP reply.
-Acceptance therefore records local close with protocol acknowledgement Pending;
-it never treats FIN as RTSP acknowledgement. Rendering and physical Stop need
-independent observation; both were confirmed for the three-second pattern run.
-The later first eight-second AAC run exited 0 with a last checkpoint of 118
-video frames and 253 queued audio packets; the user confirmed picture, sound
-and Stop. The user subsequently reported distorted, crackling, choppy sound in
-the window test. This is a playback-quality failure, not simply sync error.
-The earlier independent decoder test established only that the incorrectly
-chosen LC stream decoded as LC with stereo 440/880-Hz separation; it did not
-validate the board's ELD requirement. Header bytes, ordering and negotiated
-ports remain supported evidence. Corrected ELD codec proof and physical sound
-retest are pending; do not claim verified audio quality before that retest.
-See [binary evidence and boundaries](hisense_protocol_analysis.md) and
-[reproducible results](validation.md). No production device-name/address match.
+Native macOS `RTSPClient startMrror` calls `getDynamicPort_51040`; `teardown` sends only `streams: [{type:110}]`; `stopMirror` calls `disconnectAfterWriting`. The real board responds to Janus's TEARDOWN with FIN rather than an RTSP reply. Acceptance therefore records local close with protocol acknowledgement Pending; it never treats FIN as RTSP acknowledgement. Rendering and physical Stop need independent observation; both were confirmed for the three-second pattern run. The later first eight-second AAC run exited 0 with a last checkpoint of 118 video frames and 253 queued audio packets; the user confirmed picture, sound and Stop. The user subsequently reported distorted, crackling, choppy sound in the window test. This is a playback-quality failure, not simply sync error. The earlier independent decoder test established only that the incorrectly chosen LC stream decoded as LC with stereo 440/880-Hz separation; it did not validate the board's ELD requirement. Header bytes, ordering and negotiated ports remain supported evidence. Corrected ELD codec proof and physical sound retest are pending; do not claim verified audio quality before that retest. See [binary evidence and boundaries](hisense_protocol_analysis.md) and [reproducible results](validation.md). No production device-name/address match.
 
 ## Sender name (10 November 2026)
 
-Every receiver sees this computer as `janus@<short hostname>` (e.g.
-`janus@fedora`), from `janus_media::identity::sender_name()`. The name is used
-in the Google Cast CONNECT `userAgent`, the AirPlay SETUP `name` (legacy and
-paired) and the HomeKit pairing `X-Apple-Client-Name`, and in Hisense/EShare's
-SETUP `machine_name`, `DeviceName` header, `sayHello`, master-control
-`clientName`/`reportClientInfo` and `disconnect` lines. Only ASCII letters,
-digits, `-` and `_` (at most 48) are kept, so the name is safe in JSON, plists
-and RTSP headers. It is a display name only; AirPlay pairing identities are
-stored separately, so existing pairings stay valid.
+Every receiver sees this computer as `janus@<short hostname>` (e.g. `janus@fedora`), from `janus_media::identity::sender_name()`. The name is used in the Google Cast CONNECT `userAgent`, the AirPlay SETUP `name` (legacy and paired) and the HomeKit pairing `X-Apple-Client-Name`, and in Hisense/EShare's SETUP `machine_name`, `DeviceName` header, `sayHello`, master-control `clientName`/`reportClientInfo` and `disconnect` lines. Only ASCII letters, digits, `-` and `_` (at most 48) are kept, so the name is safe in JSON, plists and RTSP headers. It is a display name only; AirPlay pairing identities are stored separately, so existing pairings stay valid.

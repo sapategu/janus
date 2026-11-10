@@ -39,29 +39,13 @@ These references establish protocol/API behavior. They are not proof of a succes
 
 ## Hisense EShare update — 10 November 2026
 
-The earlier legacy AirPlay failure below is historical. A native
-EShare adapter (always on; the former Settings switch was removed) now owns the separate RTSP 51040 and negotiated video/audio
-ports. The user confirmed screen video, selected-window video, clean sound and
-Stop on the first board. No switch is needed and no vendor client is
-loaded. Sound matches the native AAC-ELD contract (AOT 39, 44100 Hz stereo,
-192 kbit/s, 480-sample frames); the initial AAC-LC attempt caused distorted
-sound and was corrected. No per-frame or audio-playback ACK is inferred from
-UDP/TCP writes. Other firmware, protected/moderated boards, dynamic control-port
-negotiation and sustained smooth 1080p remain unqualified. Sources and physical
-results: [research](hisense_protocol_analysis.md), [validation](validation.md).
+The earlier legacy AirPlay failure below is historical. A native EShare adapter (always on; the former Settings switch was removed) now owns the separate RTSP 51040 and negotiated video/audio ports. The user confirmed screen video, selected-window video, clean sound and Stop on the first board. No switch is needed and no vendor client is loaded. Sound matches the native AAC-ELD contract (AOT 39, 44100 Hz stereo, 192 kbit/s, 480-sample frames); the initial AAC-LC attempt caused distorted sound and was corrected. No per-frame or audio-playback ACK is inferred from UDP/TCP writes. Other firmware, protected/moderated boards, dynamic control-port negotiation and sustained smooth 1080p remain unqualified. Sources and physical results: [research](hisense_protocol_analysis.md), [validation](validation.md).
 
 ## Field result: Hisense 65WR6CE interactive display ("Azuba-Board"), 9 Nov 2026
 
 Generic receiver testing found a second screen on the LAN; it is recorded here so any future attempt starts from facts.
 
-**Latest AirPlay host attempt:** Janus selects the live-qualified legacy HTTP
-mirroring service on port 7100. Authentication and local stream setup pass, but
-mirroring fails with `Broken pipe (os error 32)`: 4 frames queued, 3 transmitted,
-0 timing requests/replies. No displayed test pattern or physical Stop is confirmed.
-The earlier RTSP video SETUP timeout remains unresolved for that separate profile.
-The board exposes an AirPlay receiver; successful Janus screen mirroring remains
-unverified. See the [HTTP implementation](airplay-http.md) and
-[handoff](airplay-handoff.md).
+**Latest AirPlay host attempt:** Janus selects the live-qualified legacy HTTP mirroring service on port 7100. Authentication and local stream setup pass, but mirroring fails with `Broken pipe (os error 32)`: 4 frames queued, 3 transmitted, 0 timing requests/replies. No displayed test pattern or physical Stop is confirmed. The earlier RTSP video SETUP timeout remains unresolved for that separate profile. The board exposes an AirPlay receiver; successful Janus screen mirroring remains unverified. See the [HTTP implementation](airplay-http.md) and [handoff](airplay-handoff.md).
 
 - **Advertises:** AirPlay receiver (`_airplay._tcp`, AppleTV3,2 emulation, `srcvers=220.68`), AirPlay audio, ADB. No Google Cast, no DLNA, no Miracast-over-infrastructure (`_display._tcp`/7250). User-supplied native Janus output now confirms live screen/ALAC capability. The first cast attempt failed on an empty successful control-SETUP reply; Janus's parser was corrected and regression-tested. Rendering remains unverified.
 - **Board firmware:** Settings → Network → Projection Display opens "ScreenShare" (v5.03.000.038), its Wi-Fi Display sink. While it is on, the firmware disconnects the board's Wi-Fi ("wireless network is not available… disconnect the wireless display first"); only Ethernet would stay up.

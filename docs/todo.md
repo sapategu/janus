@@ -2,19 +2,7 @@
 
 Statuses: **Not started**, **In progress**, **Blocked**, **Verified**. A checked item means its stated deliverable was verified, not that its whole phase shipped. Evidence must distinguish synthetic tests from native casting. No phase is release-qualified yet.
 
-**Current state (10 November 2026):** Linux laptop → AzubaTV works over both
-**Google Cast** and **AirPlay 2** (HomeKit PIN pairing, encrypted control, sound)
-with GPU H.264 encoding and an adaptive full-quality default; the user reports
-the current casting quality as good. RPM `janus-0.1.5-3` is built. The Hisense
-65WR6CE board is supported natively (no Settings switch since 10 November 2026) over EShare: a three-second native
-test-pattern cast and five-second portal-selected 1080p desktop cast rendered,
-and Stop worked, all confirmed by the user. The user also confirmed the rebuilt
-GPUI board selection → Sound off → Cast → Stop flow (then behind a switch, now removed). This is
-one board; selected-window video with corrected AAC-ELD sound is also
-user-confirmed. Sustained motion quality, protected receivers and other
-firmware remain separate qualification work.
-See [Hisense research](hisense_protocol_analysis.md). Remaining work is listed
-under "Next" below.
+**Current state (10 November 2026):** Linux laptop → AzubaTV works over both **Google Cast** and **AirPlay 2** (HomeKit PIN pairing, encrypted control, sound) with GPU H.264 encoding and an adaptive full-quality default; the user reports the current casting quality as good. RPM `janus-0.1.5-3` is built. The Hisense 65WR6CE board is supported natively (no Settings switch since 10 November 2026) over EShare: a three-second native test-pattern cast and five-second portal-selected 1080p desktop cast rendered, and Stop worked, all confirmed by the user. The user also confirmed the rebuilt GPUI board selection → Sound off → Cast → Stop flow (then behind a switch, now removed). This is one board; selected-window video with corrected AAC-ELD sound is also user-confirmed. Sustained motion quality, protected receivers and other firmware remain separate qualification work. See [Hisense research](hisense_protocol_analysis.md). Remaining work is listed under "Next" below.
 
 ## P0 — Foundation
 
