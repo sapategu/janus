@@ -1,0 +1,32 @@
+[package]
+name = "janus-app"
+version = "0.1.5"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[[bin]]
+name = "janus"
+path = "src/main.rs"
+
+# Keep native build dependencies separate from headless core verification.
+# Never substitute a browser UI for the desktop runtime.
+[workspace]
+
+[dependencies]
+gpui = "=0.2.2"
+janus-discovery = { path = "../janus-discovery" }
+janus-cast = { path = "../janus-cast" }
+janus-airplay = { path = "../janus-airplay" }
+janus-capture = { path = "../janus-capture" }
+janus-mirror = { path = "../janus-mirror" }
+tokio = { version = "=1.53.3", features = ["rt-multi-thread", "sync", "time", "net"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+# gpui_http_client -> zed-async-tar requires xattr 0.2.3. libc 0.2.190
+# removed the Linux ENOATTR alias it uses. Keep the last compatible release
+# until the upstream archive dependency supports current xattr.
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.189"
