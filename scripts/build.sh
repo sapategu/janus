@@ -55,7 +55,9 @@ dependency_lists() {
         deps_media=(libpipewire-0.3-dev libva-dev libopus-dev libasound2-dev nasm
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-bad)
         deps_package=(dpkg-dev desktop-file-utils binutils)
-        deps_ci=(curl mesa-vulkan-drivers xvfb xauth)
+        # gstreamer1.0-fdkaac (multiverse): the independent AAC-ELD decoder the
+        # AAC tests use; Fedora's gstreamer1-plugins-bad-free already has it.
+        deps_ci=(curl mesa-vulkan-drivers xvfb xauth gstreamer1.0-fdkaac)
     fi
 }
 
