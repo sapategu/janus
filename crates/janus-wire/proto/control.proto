@@ -1,0 +1,28 @@
+syntax = "proto3";
+package janus.control.v1;
+
+// Tag assignments are stable. Retired tags must be reserved, never reused.
+message Envelope {
+  uint64 request_id = 1;
+  bytes session_id = 2;
+  uint64 generation = 3;
+  uint64 sequence = 4;
+  uint64 reply_to = 5;
+  uint32 schema_minor = 6;
+  oneof payload {
+    Hello hello = 10;
+    Offer offer = 11;
+    Status status = 12;
+    Empty heartbeat = 13;
+    Empty stop = 14;
+  }
+}
+message Hello { uint32 major = 1; }
+message Offer { Mode mode = 1; }
+message Status { Code code = 1; }
+message Empty {}
+enum Mode { MODE_UNSPECIFIED = 0; SYNTHETIC = 1; VIDEO = 2; AUDIO_ONLY = 3; }
+enum Code {
+  CODE_UNSPECIFIED = 0; OK = 1; DISABLED = 2; BUSY = 3;
+  STALE = 4; EXPIRED = 5; UNSUPPORTED = 6; INVALID = 7;
+}
