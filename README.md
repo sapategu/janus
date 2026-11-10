@@ -140,6 +140,7 @@ Boards that identify themselves as EShare are detected automatically. EShare cas
 | [CI](.github/workflows/ci.yml) | pull requests, branch pushes; called by Release | fmt, Clippy and tests of both workspaces on Linux, macOS and Windows |
 | [Build](.github/workflows/build.yml) | after CI succeeds; called by Release | `.deb` (Ubuntu 24.04, installed and run), `.rpm` (Fedora 44), macOS and Windows archives (smoke-tested) |
 | [Release](.github/workflows/release.yml) | pushes to `master` only | CI → next version and notes → Build → GitHub release with packages and `SHA256SUMS` |
+| [Cache cleanup](.github/workflows/cleanup.yml) | after CI, Build or Release completes; when a pull request closes | keeps only the newest cache of each kind per branch; deletes a closed pull request's caches |
 
 Versions follow the commits since the last `vX.Y.Z` tag. Both Conventional Commits (`feat(airplay): …`, `fix: …`) and scoped subjects (`[airplay]: improve …`, `[cast]: feat: …`) are understood:
 

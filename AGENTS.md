@@ -34,7 +34,7 @@ Two Cargo workspaces, each with a committed lockfile:
 | `crates/janus-mirror` | The cast pipeline: source → output `plan` (size/fps/bitrate) → encoders → `Session::cast`/AirPlay `Sender`, Stop, auto-end |
 | `crates/janus-cli` | The `janus` executable (`cast`, `discover`, diagnostics, acceptance) + lib (`acceptance`, `cast`, `fixture`) |
 | `scripts/build.sh` | The only build script (§3) |
-| `.github/workflows` | `ci.yml` (Rust checks) → `build.yml` (packages for every OS) → `release.yml` (master only: version, notes, GitHub release) |
+| `.github/workflows` | `ci.yml` (Rust checks) → `build.yml` (packages for every OS) → `release.yml` (master only: version, notes, GitHub release); `cleanup.yml` prunes superseded Actions caches after they complete |
 | `packaging/rpm` | RPM spec, desktop entry, icon |
 | `packaging/deb` | Debian control template, copyright summary, teammate install guide |
 | `docs/` | Contracts and evidence: `cast-control.md`, `receiver-compatibility.md`, `validation.md`, `foundation.md`, `ui-spec.md`, `moq-qualification.md` |
