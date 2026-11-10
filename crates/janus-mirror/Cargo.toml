@@ -1,0 +1,25 @@
+[package]
+name = "janus-mirror"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+janus-cast.workspace = true
+janus-airplay.workspace = true
+janus-discovery.workspace = true
+janus-capture.workspace = true
+janus-encode.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+aes.workspace = true
+ctr.workspace = true
+ring.workspace = true
+openh264.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
