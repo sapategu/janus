@@ -38,6 +38,7 @@ impl std::fmt::Debug for VideoEncoder {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn software_forced() -> bool {
     std::env::var("JANUS_VIDEO_ENCODER").is_ok_and(|v| v.eq_ignore_ascii_case("software"))
 }
@@ -90,6 +91,7 @@ impl VideoEncoder {
 
     /// Retargets the bitrate while encoding. GPU only: the bundled software
     /// encoder keeps its configured rate and this returns `false`.
+    #[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
     pub fn set_bit_rate(&mut self, bit_rate: u32) -> bool {
         match &mut self.inner {
             Inner::Software(_) => false,
