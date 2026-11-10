@@ -505,6 +505,8 @@ fn video_loop(
         Video::Pattern { .. } => None,
     };
     let mut force_key = true;
+    // Only the captured-screen path resends a static picture.
+    #[cfg(target_os = "linux")]
     let mut last_sent = Instant::now() - Duration::from_secs(1);
     // Capture time of each frame in the encoder, by sequence number.
     let mut in_flight: std::collections::VecDeque<(u64, Instant)> =
@@ -674,7 +676,10 @@ fn video_loop(
                 // Queue full: the next frame must be a key frame.
                 force_key = true;
             } else {
-                last_sent = Instant::now();
+                #[cfg(target_os = "linux")]
+                {
+                    last_sent = Instant::now();
+                }
             }
             publish.lock().expect("stats lock").send_modify(|stats| {
                 if sent.is_ok() {
@@ -694,6 +699,8 @@ fn video_loop(
             });
         }
     }
+    // Ends screen capture before the loop returns; the test pattern holds nothing.
+    #[cfg(target_os = "linux")]
     drop(video);
 }
 
