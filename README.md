@@ -45,7 +45,7 @@ Check GPU encoding with `vainfo | grep EncSlice` and `gst-inspect-1.0 vah264enc`
 
 Each device was tested from a Fedora 44 laptop (AMD Renoir). Please report others that work or fail.
 
-- **AzubaTV**: Google TV, model POLYTRON4K. Google Cast mirroring with sound; AirPlay 2 after one-time PIN pairing.
+- **Google TV** (POLYTRON 4K): Google Cast mirroring with sound; AirPlay 2 after one-time PIN pairing.
 - **Hisense 65WR6CE interactive display** (EShare): screen and window casting with clean AAC-ELD sound, Stop.
 - **Macs as AirPlay receivers** (Mac17,2, Mac17,5, Mac14,2): not supported. Janus targets TVs and displays. Macs ask for a first-time code over a pairing flow Janus doesn't implement, so they report "requires pairing".
 
@@ -96,21 +96,21 @@ The CLI is built from source (`cargo run --bin janus -- …`; the packaged `janu
 janus cast
 
 # Choose a receiver and a window, without sound, for 20 seconds
-janus cast --name "AzubaTV" --source window --no-audio --seconds 20
+janus cast --name "Living Room TV" --source window --no-audio --seconds 20
 
 # Moving test pattern (no capture permission needed)
 janus cast --source test-pattern --seconds 10
 
 # Force a protocol, size or bitrate
-janus cast --name "AzubaTV" --protocol airplay --resolution 1080p --mbps 8
+janus cast --name "Living Room TV" --protocol airplay --resolution 1080p --mbps 8
 
 # Pair once with an AirPlay TV that shows a code
-janus pair --name "AzubaTV"
+janus pair --name "Living Room TV"
 
 # List receivers, then check each one read-only (never interrupts the TV)
 janus discover --seconds 5
 janus diagnostics check-receivers
-janus diagnostics check-receivers --name "AzubaTV" --mirror 10   # also casts a test pattern
+janus diagnostics check-receivers --name "Living Room TV" --mirror 10   # also casts a test pattern
 ```
 
 #### `janus cast` flags
