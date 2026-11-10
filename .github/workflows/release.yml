@@ -1,0 +1,203 @@
+name: Release
+on:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    name: Version and release notes
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      bump: ${{ steps.plan.outputs.bump }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: plan
+        name: Choose the next version from the commits
+        shell: bash
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          last="$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)"
+          if [ -n "$last" ]; then
+            base="${last#v}"
+            range="$last..HEAD"
+          else
+            base="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+            range="HEAD"
+          fi
+          echo "Last release: ${last:-none} (base $base); commits: $range"
+
+          re_scoped='^\[([^]]+)\]:?[[:space:]]*(.*)$'
+          re_typed='^([A-Za-z]+)(\(([^)]*)\))?(!)?:[[:space:]]*(.+)$'
+          rank() { case "$1" in major) echo 3 ;; minor) echo 2 ;; patch) echo 1 ;; *) echo 0 ;; esac; }
+          bump="none"
+          breaking=() features=() fixes=() improvements=() other=()
+          while IFS= read -r -d $'\x1e' record; do
+            record="${record#$'\n'}"
+            [ -n "$record" ] || continue
+            sha="${record%%$'\x1f'*}"
+            rest="${record#*$'\x1f'}"
+            subject="${rest%%$'\x1f'*}"
+            body="${rest#*$'\x1f'}"
+            type="" scope="" bang="" desc="$subject"
+            if [[ $subject =~ $re_scoped ]]; then
+              scope="${BASH_REMATCH[1]}"
+              desc="${BASH_REMATCH[2]}"
+              if [[ $desc =~ $re_typed ]]; then
+                type="${BASH_REMATCH[1],,}" bang="${BASH_REMATCH[4]}" desc="${BASH_REMATCH[5]}"
+              fi
+            elif [[ $subject =~ $re_typed ]]; then
+              type="${BASH_REMATCH[1],,}" scope="${BASH_REMATCH[3]}"
+              bang="${BASH_REMATCH[4]}" desc="${BASH_REMATCH[5]}"
+            fi
+            if [ -z "$type" ]; then
+              case "${scope,,}" in
+                ci | docs | doc) type="${scope,,}" ;;
+                *)
+                  case "$(printf '%s' "$desc" | awk '{ print tolower($1) }')" in
+                    add | adds | added | implement* | introduce* | support* | enable* | create* | new | allow*) type="feat" ;;
+                    fix | fixes | fixed | correct* | resolve* | repair* | prevent* | handle*) type="fix" ;;
+                    doc | docs | document*) type="docs" ;;
+                    test | tests) type="test" ;;
+                    *) type="improve" ;;
+                  esac ;;
+              esac
+            fi
+            entry="- ${scope:+**$scope:** }$desc ([${sha:0:7}]($REPO_URL/commit/$sha))"
+            level="none"
+            if [ -n "$bang" ] || grep -qE '^BREAKING[ -]CHANGE:' <<<"$body"; then
+              breaking+=("$entry")
+              level="major"
+            else
+              case "$type" in
+                feat) features+=("$entry"); level="minor" ;;
+                fix) fixes+=("$entry"); level="patch" ;;
+                perf | improve) improvements+=("$entry"); level="patch" ;;
+                *) other+=("$entry") ;;
+              esac
+            fi
+            if [ "$(rank "$level")" -gt "$(rank "$bump")" ]; then bump="$level"; fi
+          done < <(git log --no-merges --format='%H%x1f%s%x1f%b%x1e' "$range")
+
+          IFS=. read -r major minor patch <<<"$base"
+          case "$bump" in
+            major) major=$((major + 1)) minor=0 patch=0 ;;
+            minor) minor=$((minor + 1)) patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          version="$major.$minor.$patch"
+          tag="v$version"
+          if [ "$bump" != none ] && git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag already exists; nothing to release."
+            bump="none"
+          fi
+          {
+            echo "bump=$bump"
+            echo "version=$version"
+            echo "tag=$tag"
+          } >>"$GITHUB_OUTPUT"
+          if [ "$bump" = none ]; then
+            echo "No feature, fix or improvement since ${last:-the start}; no release." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          section() {
+            local title="$1"
+            shift
+            [ "$#" -gt 0 ] || return 0
+            printf '### %s\n\n' "$title"
+            printf '%s\n' "$@"
+            echo
+          }
+          {
+            echo "## Janus $tag"
+            echo
+            echo "Released $(date -u +%Y-%m-%d) from commit \`${GITHUB_SHA:0:7}\` (${bump} release)."
+            echo
+            section "Breaking changes" ${breaking[@]+"${breaking[@]}"}
+            section "Features" ${features[@]+"${features[@]}"}
+            section "Fixes" ${fixes[@]+"${fixes[@]}"}
+            section "Improvements" ${improvements[@]+"${improvements[@]}"}
+            section "Other changes" ${other[@]+"${other[@]}"}
+            echo "### Downloads"
+            echo
+            echo "| File | For | Install |"
+            echo "| --- | --- | --- |"
+            echo "| \`janus_${version}-1_amd64.deb\` | Ubuntu / Kubuntu 24.04 or newer | \`sudo apt install ./janus_${version}-1_amd64.deb\` |"
+            echo "| \`janus-${version}-1.fc44.x86_64.rpm\` | Fedora 44 | \`sudo dnf install ./janus-${version}-1.fc44.x86_64.rpm\` |"
+            echo "| \`janus-${version}-macos-arm64.tar.gz\` | macOS, Apple silicon (preview: app only, casting pending) | unpack and run \`./janus\` |"
+            echo "| \`janus-${version}-windows-x86_64.zip\` | Windows x86_64 (preview: app only, casting pending) | unzip and run \`janus.exe\` |"
+            echo
+            echo "Verify downloads with \`sha256sum -c SHA256SUMS\`."
+            echo
+            if [ -n "$last" ]; then
+              echo "**Full changelog:** $REPO_URL/compare/$last...$tag"
+            else
+              echo "**Full changelog:** $REPO_URL/commits/$tag"
+            fi
+          } >release-notes.md
+          cat release-notes.md >>"$GITHUB_STEP_SUMMARY"
+          echo "Next release: $tag ($bump)"
+      - uses: actions/upload-artifact@v4
+        if: steps.plan.outputs.bump != 'none'
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  build:
+    name: Build
+    needs: version
+    if: needs.version.outputs.bump != 'none'
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  release:
+    name: Publish ${{ needs.version.outputs.tag }}
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: janus-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum -- * >SHA256SUMS
+          ls -l
+          cat SHA256SUMS
+      - name: Create the GitHub release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving it unchanged."
+            exit 0
+          fi
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Janus $TAG" \
+            --notes-file release-notes.md

@@ -1,0 +1,162 @@
+name: Build
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches-ignore: [master]
+  workflow_call:
+    inputs:
+      version:
+        description: Release version (X.Y.Z) to stamp; empty keeps the manifest version
+        type: string
+        default: ""
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+jobs:
+  gate:
+    name: CI passed
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_SHA }}
+      - id: version
+        shell: bash
+        run: |
+          version='${{ inputs.version }}'
+          if [ -z "$version" ]; then
+            version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "Building Janus $version from $BUILD_SHA"
+
+  deb:
+    name: Linux .deb (Ubuntu 24.04)
+    needs: gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_SHA }}
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/janus-app -> ../../target/desktop
+          key: deb
+      - name: Install native build, media and packaging dependencies
+        run: ./scripts/build.sh deps --yes
+      - name: Stamp release version
+        if: inputs.version != ''
+        run: ./scripts/build.sh version '${{ inputs.version }}'
+      - name: Build the .deb
+        run: ./scripts/build.sh deb
+      - name: Install the package and run it
+        run: |
+          sudo apt-get install -y ./target/deb/janus_*.deb
+          janus --version
+          test "$(ldd /usr/bin/janus | grep -c 'not found')" = 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-linux-deb
+          path: target/deb/janus_*.deb
+          if-no-files-found: error
+
+  rpm:
+    name: Linux .rpm (Fedora 44)
+    needs: gate
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install checkout prerequisites
+        run: dnf install -y git curl
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_SHA }}
+      - name: Install native build, media, packaging and virtual display dependencies
+        run: ./scripts/build.sh deps --yes --ci
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Stamp release version
+        if: inputs.version != ''
+        run: ./scripts/build.sh version '${{ inputs.version }}'
+      - name: Build the RPM
+        run: ./scripts/build.sh rpm
+      - name: Render one native frame (informational)
+        continue-on-error: true
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          unset WAYLAND_DISPLAY
+          XDG_RUNTIME_DIR="$(mktemp -d)"
+          export XDG_RUNTIME_DIR
+          chmod 700 "$XDG_RUNTIME_DIR"
+          timeout 25s xvfb-run -a -s '-screen 0 1440x1000x24' \
+            ./target/desktop/release/janus --smoke-test | tee smoke.log
+          grep -q '^JANUS_SMOKE_OK:' smoke.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-linux-rpm
+          path: target/rpm/RPMS/x86_64/janus-*.rpm
+          if-no-files-found: error
+
+  desktop:
+    name: ${{ matrix.label }}
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            label: macOS (arm64)
+            archive: macos-arm64.tar.gz
+          - os: windows-2025
+            label: Windows (x86_64)
+            archive: windows-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_SHA }}
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/janus-app -> ../../target/desktop
+          key: release
+      - name: Stamp release version
+        if: inputs.version != ''
+        run: ./scripts/build.sh version '${{ inputs.version }}'
+      - name: Build the release app
+        run: cargo build --release --locked --manifest-path crates/janus-app/Cargo.toml --target-dir target/desktop
+      - name: Render one native frame
+        run: |
+          ./target/desktop/release/janus --smoke-test | tee smoke.log
+          grep -q '^JANUS_SMOKE_OK:' smoke.log
+      - name: Package
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          mkdir -p dist
+          name="janus-$VERSION-${{ matrix.archive }}"
+          if [ "$RUNNER_OS" = Windows ]; then
+            cp target/desktop/release/janus.exe README.md dist/
+            (cd dist && 7z a -tzip "$name" janus.exe README.md >/dev/null && rm janus.exe README.md)
+          else
+            cp target/desktop/release/janus README.md dist/
+            tar -C dist -czf "dist/$name" janus README.md
+            rm dist/janus dist/README.md
+          fi
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-${{ runner.os == 'Windows' && 'windows' || 'macos' }}
+          path: dist/janus-*
+          if-no-files-found: error
