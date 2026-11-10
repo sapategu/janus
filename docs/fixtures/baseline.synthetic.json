@@ -1,0 +1,59 @@
+{
+  "recorded_date": "2026-11-09",
+  "synthetic_only": true,
+  "physically_calibrated": false,
+  "fixture": {
+    "pattern.y4m": {
+      "bytes": 15553123,
+      "sha256": "de77d0f9f3c4bc0a5dbb5be06dc66d9e45fcda0bc4a687b3d48d2b411adb2fe0"
+    },
+    "impulses.wav": {
+      "bytes": 576044,
+      "sha256": "6b870d14c4bf43345d84c124c0e3d0217a0f576595624e6380abbdabe5db1a21"
+    },
+    "manifest.json": {
+      "bytes": 569,
+      "sha256": "dc9c5b837789d6f849a373ae9d41e05f77a450ca4ef4957ac35303adc14d60da"
+    }
+  },
+  "simulation": {
+    "admission_drops": 560,
+    "clock_uncertainty_us": 1000.0000001788139,
+    "final_profile": {
+      "bitrate": 5000000,
+      "fps": 60,
+      "height": 720,
+      "width": 1280
+    },
+    "fitted_drift_ppm": 199.99600008602238,
+    "frames": 3600,
+    "peak_queue_bytes": 32768,
+    "physical_latency_measured": false,
+    "popped_access_units": 3000,
+    "quality_changes": 11,
+    "synthetic_only": true
+  },
+  "correlation": {
+    "physical_provenance_verified": false,
+    "declared_calibration_error_us": 1,
+    "expected_events": 2,
+    "video_misses": 1,
+    "audio_misses": 0,
+    "audio_reference_misses": 0,
+    "audio_latency_events": 2,
+    "paired_events": 1,
+    "video_latency_p95_us": 50000,
+    "audio_latency_p95_us": 60000,
+    "absolute_skew_p95_us": 2000,
+    "signed_skew_min_us": -2000,
+    "signed_skew_max_us": -2000
+  },
+  "packet_control_run": {
+    "synthetic_only": true,
+    "sent": 85,
+    "deliberately_lost": 7,
+    "overflow_drops": 0,
+    "peak_packet_payload_bytes": 2954,
+    "note": "Observed run, not a golden value; runtime scheduling changes packet counts."
+  }
+}

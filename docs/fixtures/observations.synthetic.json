@@ -1,0 +1,16 @@
+[
+  {
+    "event_id": 0,
+    "capture_us": 1000000,
+    "display_us": 1050000,
+    "audio_us": 1048000,
+    "source_audio_us": 1000000
+  },
+  {
+    "event_id": 1,
+    "capture_us": 2000000,
+    "display_us": null,
+    "audio_us": 2060000,
+    "source_audio_us": 2000000
+  }
+]
